@@ -1,0 +1,67 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Advanced LIMS Console
+ * Usage: php bin/console <command>
+ *
+ * Commands:
+ *   sap:sync     Run SAP HANA sync
+ *   key:generate Generate application key
+ */
+
+if (php_sapi_name() !== 'cli') {
+    die('This script must be run from the command line.');
+}
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+// Load .env
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (str_starts_with(trim($line), '#')) continue;
+        if (str_contains($line, '=')) {
+            [$key, $value] = explode('=', $line, 2);
+            $_ENV[trim($key)] = trim($value);
+            putenv(trim($key) . '=' . trim($value));
+        }
+    }
+}
+
+require_once __DIR__ . '/../app/Helpers/helpers.php';
+
+$command = $argv[1] ?? 'help';
+
+switch ($command) {
+    case 'sap:sync':
+        $syncService = new \App\Services\SapSyncService();
+        $results = $syncService->runScheduledSync();
+        echo "[" . date('Y-m-d H:i:s') . "] SAP Sync completed:\n";
+        foreach ($results as $key => $result) {
+            $status = $result['success'] ? 'OK' : 'FAIL';
+            echo "  {$key}: [{$status}] {$result['message']}\n";
+        }
+        break;
+
+    case 'key:generate':
+        $key = 'base64:' . base64_encode(random_bytes(32));
+        $envContent = file_get_contents($envFile);
+        if (preg_match('/APP_KEY=.*/', $envContent)) {
+            $envContent = preg_replace('/APP_KEY=.*/', "APP_KEY={$key}", $envContent);
+        } else {
+            $envContent .= "\nAPP_KEY={$key}\n";
+        }
+        file_put_contents($envFile, $envContent);
+        echo "Application key generated: {$key}\n";
+        break;
+
+    case 'help':
+    default:
+        echo "Advanced LIMS Console\n";
+        echo "Usage: php bin/console <command>\n\n";
+        echo "Commands:\n";
+        echo "  sap:sync       Run SAP HANA scheduled sync\n";
+        echo "  key:generate   Generate application encryption key\n";
+        break;
+}

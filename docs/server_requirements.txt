@@ -1,0 +1,93 @@
+==============================================================================
+  PlexiQ LIMS - Server System Requirements
+  Version 2.0
+==============================================================================
+
+1. HARDWARE REQUIREMENTS
+-------------------------------------------------------------------------------
+
+  Component          Minimum           Recommended
+  ------------------ ----------------- ------------------------
+  RAM                4 GB              8 GB
+  Free Disk Space    500 MB            2 GB
+  CPU Cores          2                 4
+
+2. OPERATING SYSTEM
+-------------------------------------------------------------------------------
+
+  Windows 10 (64-bit) or later
+  Windows Server 2019 or later
+
+3. SOFTWARE REQUIREMENTS
+-------------------------------------------------------------------------------
+
+  PHP 8.0 or later
+    Download: https://windows.php.net/download/
+    Installer: XAMPP (includes Apache + PHP) https://www.apachefriends.org/
+
+  PostgreSQL 14 or later
+    Download: https://www.postgresql.org/download/windows/
+    Note: The system was tested with PostgreSQL 18
+
+  Composer (PHP dependency manager)
+    Download: https://getcomposer.org/download/
+
+  Web browser: Chrome, Firefox, or Edge
+
+4. PHP EXTENSIONS (must be enabled in php.ini)
+-------------------------------------------------------------------------------
+
+  Extension           Required For
+  ------------------- --------------------------------------------
+  pdo_pgsql           Database connection (ESSENTIAL)
+  pgsql               PostgreSQL native functions
+  json                JSON encoding/decoding
+  session             User authentication sessions
+  mbstring            Multi-byte string handling
+  curl                HTTP / API requests
+  fileinfo            File upload type detection
+
+  How to enable (in XAMPP's C:\xampp\php\php.ini):
+    extension=pdo_pgsql
+    extension=pgsql
+    extension=curl
+    extension=fileinfo
+    (json, session, mbstring are usually enabled by default)
+
+5. OPTIONAL COMPONENTS
+-------------------------------------------------------------------------------
+
+  Extension/Package   Purpose
+  ------------------- --------------------------------------------
+  ext-dom             PDF generation via Dompdf
+  dompdf/dompdf       PDF COA export (install via Composer)
+  ext-odbc            SAP HANA direct ODBC connection
+
+6. NETWORK
+-------------------------------------------------------------------------------
+
+  Port 8080 (default) - Open in firewall for web access to LIMS
+  Port 5432           - PostgreSQL (keep internal / local only)
+
+7. VERIFIED ENVIRONMENT (this machine)
+-------------------------------------------------------------------------------
+
+  OS:         Windows (64-bit)
+  PHP:        8.0.30 (XAMPP)
+  PostgreSQL: 18
+  Web Server: PHP built-in development server
+  Composer:   Installed
+  Database:   limsdb @ 127.0.0.1:5432
+
+8. DEFAULT LOGIN CREDENTIALS (after fresh install)
+-------------------------------------------------------------------------------
+
+  Admin     username: admin      password: admin@123
+  Analyst   username: analyst1   password: admin@123
+  Reviewer  username: reviewer1  password: admin@123
+  Approver  username: approver1  password: admin@123
+  Customer  username: customer   password: admin@123
+
+==============================================================================
+  End of Server System Requirements
+==============================================================================

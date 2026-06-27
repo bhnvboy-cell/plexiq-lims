@@ -1,0 +1,59 @@
+{
+    "name": "lims/plexiq-lims",
+    "description": "PlexiQ LIMS - Advanced Laboratory Information Management System",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.0",
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-session": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "ext-pdo": "*",
+        "ext-pgsql": "*",
+        "phpunit/phpunit": "^9.5"
+    },
+    "suggest": {
+        "ext-odbc": "For SAP HANA ODBC direct connection",
+        "ext-dom": "For PDF generation via Dompdf",
+        "dompdf/dompdf": "For PDF COA export",
+        "phpunit/phpunit": "For running the test suite"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "files": [
+            "app/Helpers/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "sap:sync": "php bin/console sap:sync",
+        "key:generate": "php bin/console key:generate",
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite Unit",
+        "test:feature": "phpunit --testsuite Feature --exclude-group database",
+        "test:coverage": "phpunit --coverage-html storage/coverage",
+        "test:ci": "phpunit --coverage-text --log-junit storage/logs/test-results.xml"
+    },
+    "config": {
+        "disable-tls": true,
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform": {
+            "php": "8.1"
+        }
+    },
+    "repositories": [{
+        "name": "packagist",
+        "type": "composer",
+        "url": "https://repo.packagist.org"
+    }]
+}

@@ -1,0 +1,13 @@
+PlexiQ LIMS - Login Credentials
+=================================
+URL:      http://localhost:8083
+Password: admin@123
+
+Users:
+  admin    (System Administrator)
+  analyst  (Lab Analyst)
+  reviewer (Quality Reviewer)
+  approver (Final Approver)
+  customer (External Customer)
+
+Default password for all users above: admin@123

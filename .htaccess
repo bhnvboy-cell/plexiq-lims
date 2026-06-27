@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /plexiq/
+
+# If the request is for a real file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything else through public/index.php
+RewriteRule ^(.*)$ public/index.php [QSA,L]

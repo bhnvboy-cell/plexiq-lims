@@ -1,0 +1,208 @@
+================================================================================
+  STANDARD OPERATING PROCEDURE
+  PlexiQ LIMS - Laboratory Information Management System
+  SOP No: LAB-SOP-001 | Version: 1.0 | Effective Date: 2026-06-23
+================================================================================
+
+1. PURPOSE
+--------------------------------------------------------------------------------
+  To define the standard procedure for registration, analysis, review, and
+  release of batches and samples using PlexiQ LIMS for Starch and Glucose
+  product quality control.
+
+2. SCOPE
+--------------------------------------------------------------------------------
+  This SOP applies to all Quality Control (QC) personnel including Analysts,
+  Reviewers, Approvers, and System Administrators handling Starch and Glucose
+  product testing in the laboratory.
+
+3. RESPONSIBILITIES
+--------------------------------------------------------------------------------
+  - Admin:      System configuration, user management, master data setup
+  - Analyst:    Batch registration, sample analysis, result entry
+  - Reviewer:   Review of test results and batch status
+  - Approver:   Final approval and COA release
+
+4. DEFINITIONS / ABBREVIATIONS
+--------------------------------------------------------------------------------
+  LIMS  - Laboratory Information Management System
+  COA   - Certificate of Analysis
+  SPC   - Statistical Process Control
+  OOS   - Out of Specification
+  CAPA  - Corrective and Preventive Action
+  DE    - Dextrose Equivalent
+  DS    - Dry Substance
+  ICUMSA - International Commission for Uniform Methods of Sugar Analysis
+
+5. PROCEDURE - BATCH MANAGEMENT WORKFLOW
+--------------------------------------------------------------------------------
+
+  5.1. MASTER DATA CONFIGURATION (Admin only)
+  ----------------------------------------------------------------------------
+  5.1.1. Login as Admin at http://localhost:8080
+  5.1.2. Navigate to Administration > Master Data
+  5.1.3. Configure the following as needed:
+         a) Products - Add/modify Starch and Glucose products with category
+         b) Tests - Add analysis parameters with spec limits and methods
+         c) Product-Test Mapping - Assign tests to products with product-
+            specific specification limits
+         d) Methods - Define test methods (HPLC, pH meter, titration, etc.)
+         e) Units - Define measurement units
+         f) COA Templates - Customize certificate layout with QR/barcode
+         g) Email Config - Set SMTP for notifications
+
+  5.2. BATCH REGISTRATION
+  ----------------------------------------------------------------------------
+  5.2.1. Login as Admin or Analyst
+  5.2.2. Click "Batch Management" in the sidebar
+  5.2.3. Click "New Batch" button
+  5.2.4. Fill in the registration form:
+         a) Batch Number - e.g., STARCH-2026-001
+         b) Batch Size - e.g., 1000 kg
+         c) Product - Select from Starch/Glucose products
+         d) Assigned Analyst - Select analyst (or leave auto-assigned)
+         e) Manufacture Date - Date of production
+         f) Expiry Date - Date of expiration
+         g) Notes - Any additional information
+  5.2.5. Upon product selection, the system displays the list of tests
+         that will be auto-assigned
+  5.2.6. Click "Register Batch & Create Sample"
+  5.2.7. System automatically:
+         a) Creates the batch record
+         b) Creates a sample linked to the batch
+         c) Assigns all product-specific tests to the sample
+
+  5.3. SAMPLE ANALYSIS & RESULT ENTRY
+  ----------------------------------------------------------------------------
+  5.3.1. Navigate to the batch by clicking its number in the batch list
+  5.3.2. The "Analysis Parameters" table shows all tests with spec limits
+  5.3.3. Click "View" on a sample, then navigate to enter results:
+         a) Go to Quality Control > Results Entry
+         b) Find the pending test and click "Enter Result"
+         c) Enter the numeric or text result value
+         d) System auto-calculates Pass/Fail based on specification limits
+         e) Submit the result
+  5.3.4. Alternatively, go to Samples > [Sample Code] > Tests section
+  5.3.5. Status flow for each test:
+         Pending -> In Progress -> Completed -> Reviewed -> Approved
+
+  5.4. RECHECK / RETEST PROCEDURE
+  ----------------------------------------------------------------------------
+  5.4.1. If a completed test requires re-analysis:
+         a) Navigate to Batch Show page
+         b) In the Analysis Parameters table, find the test
+         c) Click "Recheck" button
+         d) Confirm the action
+         e) The test resets to "Pending" status and results are cleared
+         f) Proceed with re-analysis and new result entry
+
+  5.5. ADDING TESTS TO A BATCH
+  ----------------------------------------------------------------------------
+  5.5.1. On the Batch Show page, click "Add Tests"
+  5.5.2. Select additional tests from the list (only unassigned tests shown)
+  5.5.3. Click "Add Tests"
+  5.5.4. Selected tests are added to all samples in the batch
+
+  5.6. ADDING SAMPLES TO A BATCH
+  ----------------------------------------------------------------------------
+  5.6.1. On the Batch Show page, click "Add Sample"
+  5.6.2. Confirm the action
+  5.6.3. A new sample is created with all product tests auto-assigned
+
+  5.7. BATCH STATUS WORKFLOW
+  ----------------------------------------------------------------------------
+  The batch progresses through these stages:
+
+    [Registered] --> [In Progress] --> [Reviewed] --> [Approved] --> [COA Released]
+         |                |                |                               |
+         |                +--> [Rejected]  +--> [Rejected]                 |
+         |                                                                 |
+         +-----------------------------------------------------------------+
+
+  5.7.1. Registered - Batch created, no analysis started
+  5.7.2. In Progress - Analysis is underway
+  5.7.3. Reviewed - All results reviewed by Reviewer
+  5.7.4. Approved - Results approved by Approver
+  5.7.5. COA Released - Certificate generated and released to customer
+  5.7.6. Rejected - Batch failed quality criteria
+
+  Use the workflow buttons at the top of the Batch Show page to advance
+  the status. The workflow stepper graphic shows current position.
+
+  5.8. PRODUCT-TEST MAPPING CONFIGURATION
+  ----------------------------------------------------------------------------
+  5.8.1. Navigate to Master Data > Product-Test Mapping
+  5.8.2. Click "Map Test" to assign a test to a product
+  5.8.3. Set product-specific specification limits (overrides global limits)
+  5.8.4. Each product can have its own pass/fail criteria per test
+  5.8.5. Example - Starch parameters (6 tests):
+         a) pH (20% slurry)        Spec: 5.0 - 7.0
+         b) Moisture Content       Spec: NMT 14.0%
+         c) Viscosity (6% solids)  Spec: 200 - 800 cP
+         d) Brightness/Whiteness   Spec: 85.0% - 100.0%
+         e) Particle Size (d50)    Spec: 10 - 35 um
+         f) Sulphated Ash          Spec: NMT 0.5%
+  5.8.6. Example - Glucose parameters (6 tests):
+         a) Dextrose Equivalent    Spec: 40 - 44
+         b) pH (50% solution)      Spec: 4.0 - 6.0
+         c) Dry Substance          Spec: 70% - 82%
+         d) Colour (ICUMSA)        Spec: NMT 200 IU
+         e) Turbidity (NTU)        Spec: NMT 50 NTU
+         f) Conductivity           Spec: NMT 50 uS/cm
+
+  5.9. SPC (STATISTICAL PROCESS CONTROL)
+  ----------------------------------------------------------------------------
+  5.9.1. Navigate to Quality Control > SPC Charts
+  5.9.2. Select a parameter to view its control chart
+  5.9.3. Use the chart type selector: Line, Bar, Scatter, X-bar, R Chart
+  5.9.4. Click "Calculate" to compute Cp, Cpk, Cpu, Cpl, Cpm statistics
+  5.9.5. Monitor trends and detect out-of-control conditions
+
+  5.10. COA (CERTIFICATE OF ANALYSIS)
+  ----------------------------------------------------------------------------
+  5.10.1. Navigate to Documents > Certificate of Analysis
+  5.10.2. Select an approved sample
+  5.10.3. Click "Generate COA" to produce the certificate
+  5.10.4. Review and release to customer
+  5.10.5. Customers can view/download COA via the Customer Portal
+
+  5.11. OOS (OUT OF SPECIFICATION) MANAGEMENT
+  ----------------------------------------------------------------------------
+  5.11.1. When a test result exceeds specification limits, initiate OOS
+  5.11.2. Navigate to Quality Events > OOS
+  5.11.3. Create OOS record with:
+          a) Test parameter details
+          b) Actual result vs specification
+          c) Severity classification
+          d) Root cause investigation
+  5.11.4. Track OOS through investigation and closure workflow
+
+  5.12. CAPA (CORRECTIVE AND PREVENTIVE ACTION)
+  ----------------------------------------------------------------------------
+  5.12.1. Create CAPA records from OOS investigations or audits
+  5.12.2. Assign corrective actions with due dates
+  5.12.3. Track implementation and effectiveness verification
+  5.12.4. Close CAPA upon successful verification
+
+6. SYSTEM ADMINISTRATION
+--------------------------------------------------------------------------------
+  6.1. User Management: Administration > Users
+  6.2. Audit Trail: Administration > Audit Trail
+  6.3. Email Config: Master Data > Email Configuration
+  6.4. SAP Integration: Administration > SAP Integration
+
+7. REFERENCES
+--------------------------------------------------------------------------------
+  - Installation Procedure: docs/installation_procedure.txt
+  - Database Schema: database/schema.sql
+  - Migration Scripts: database/migrations/
+
+8. REVISION HISTORY
+--------------------------------------------------------------------------------
+  Version  Date         Author          Changes
+  -------  -----------  --------------  ---------------------------------------
+  1.0      2026-06-23   QC Department   Initial release
+
+================================================================================
+  END OF SOP
+================================================================================

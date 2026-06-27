@@ -1,0 +1,141 @@
+================================================================================
+  PlexiQ LIMS - Installation Procedure
+  Version 1.0
+================================================================================
+
+1. SYSTEM REQUIREMENTS
+--------------------------------------------------------------------------------
+  - Windows 10/11 or Windows Server 2019+
+  - PHP 8.0 or higher
+  - PostgreSQL 18 or higher
+  - Composer (PHP dependency manager)
+  - Web browser (Chrome/Firefox/Edge)
+  - RAM: Minimum 4 GB (8 GB recommended)
+  - Disk: Minimum 500 MB free space
+
+2. INSTALLATION STEPS
+--------------------------------------------------------------------------------
+
+  2.1. Install PostgreSQL 18
+  - Download from https://www.postgresql.org/download/windows/
+  - Run installer, use port 5432
+  - Set password for postgres user (leave blank for local dev)
+  - Complete installation
+
+  2.2. Install PHP 8.0+
+  - Included with XAMPP (C:\xampp\php\php.exe)
+  - Ensure php.ini has these extensions enabled:
+      extension=pgsql
+      extension=pdo_pgsql
+      extension=mbstring
+      extension=openssl
+      extension=fileinfo
+
+  2.3. Install Composer
+  - Download from https://getcomposer.org/download/
+  - Run installer and point to PHP executable (C:\xampp\php\php.exe)
+
+  2.4. Prepare Application Files
+  - Copy the PlexiQ LIMS folder to C:\xampp\htdocs\plexiq
+  - Or extract the distribution archive to that location
+
+  2.5. Automated Setup (Recommended)
+  - Open Command Prompt or PowerShell as Administrator
+  - Navigate to the application directory:
+      cd C:\xampp\htdocs\plexiq
+  - Run the setup script:
+      setup.bat
+  
+  The setup.bat script will:
+    a) Install PHP dependencies via Composer
+    b) Create the limsdb database in PostgreSQL
+    c) Import the database schema (tables, seed data)
+    d) Verify the installation
+
+  2.6. Manual Setup (Alternative)
+  - If setup.bat fails, follow these steps:
+
+  a) Install PHP dependencies:
+       composer install --no-interaction
+
+  b) Create the database:
+       Open "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres
+       Run: CREATE DATABASE limsdb;
+       Run: \q
+
+  c) Import schema:
+       "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d limsdb -f database\schema.sql
+
+  d) Run migrations:
+       "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d limsdb -f database\migrations\001_spc_module.sql
+       "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d limsdb -f database\migrations\002_master_data_expansion.sql
+       "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d limsdb -f database\migrations\003_batch_product_tests.sql
+
+3. STARTING THE APPLICATION
+--------------------------------------------------------------------------------
+  Option A: Using start.bat (Recommended)
+    cd C:\xampp\htdocs\plexiq
+    start.bat
+    
+    This launches: php -S localhost:8080 -t public
+
+  Option B: Manual start
+    cd C:\xampp\htdocs\plexiq
+    php -S localhost:8080 -t public
+
+  The application will be available at: http://localhost:8080
+
+4. DEFAULT LOGIN CREDENTIALS
+--------------------------------------------------------------------------------
+  Admin:     username = admin      password = admin@123
+  Analyst:   username = analyst1   password = admin@123
+  Reviewer:  username = reviewer1  password = admin@123
+  Approver:  username = approver1  password = admin@123
+  Customer:  username = customer1  password = admin@123
+
+5. DEFAULT SEED DATA
+--------------------------------------------------------------------------------
+  The system includes pre-loaded seed data:
+  - 4 Customers (Demo, PharmaCorp, BioGen, ChemSolutions)
+  - 10 Products (Test Product Alpha + 3 Starch + 3 Glucose + 3 Additional)
+  - 8 Methods (HPLC, pH, GC, Titration, Gravimetric, FTIR, KF, Density)
+  - 8 Units (%, ppm, pH, mm, cP, N, mg/kg, etc.)
+  - 20 Tests (general + 6 Starch-specific + 6 Glucose-specific)
+  - 36 Product-Test Mappings (6 products x 6 tests each)
+  - 60 SPC demo readings per parameter (pH, DS, DP1-DP4, DE, Viscosity, Color, Turbidity)
+  - 1 COA Template (Standard)
+  - 1 Project (Q4 Quality Improvement)
+  - 1 OOS Record (pH Level)
+  - 1 CAPA Record (pH Meter Calibration)
+
+6. TROUBLESHOOTING
+--------------------------------------------------------------------------------
+  Problem: "Could not find driver" when accessing pages
+  Solution: Ensure PHP PostgreSQL extensions are enabled in php.ini
+
+  Problem: "Connection refused" on database
+  Solution: Verify PostgreSQL service is running:
+    Start > Services > postgresql-x64-18 > Start
+
+  Problem: Port 8080 already in use
+  Solution: Use a different port:
+    php -S localhost:8081 -t public
+
+  Problem: CSRF token error (419)
+  Solution: Clear browser cookies and restart the server
+
+  Problem: 500 Internal Server Error
+  Solution: Check PHP error log or run with display_errors:
+    php -S localhost:8080 -t public -d display_errors=1
+
+7. UNINSTALLATION
+--------------------------------------------------------------------------------
+  Run: uninstall.bat
+  This will:
+  a) Drop the limsdb database
+  b) Remove the vendor directory
+  c) Clear PHP sessions
+
+================================================================================
+  End of Installation Procedure
+================================================================================

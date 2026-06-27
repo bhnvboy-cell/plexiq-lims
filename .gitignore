@@ -1,0 +1,40 @@
+# Environment
+.env
+.env.local
+
+# Dependencies
+vendor/
+node_modules/
+
+# Storage
+storage/coa/*
+!storage/coa/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+storage/sessions/*
+!storage/sessions/.gitkeep
+storage/installer/*
+!storage/installer/.gitkeep
+storage/coverage/
+
+# PHPUnit cache
+.phpunit.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Build artifacts
+*.exe
+*.msi
+*.zip
+dist/
+build/
