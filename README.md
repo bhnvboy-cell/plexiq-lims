@@ -36,7 +36,7 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 - Instrument file import (CSV, XML, text parsers)
 - REST API with token authentication & webhooks
 - SSO provider support
-- Email notifications
+- Email notifications with per-user preference settings
 
 **Additional Modules**
 - Electronic Lab Notebook (ELN) with attachments
@@ -98,6 +98,7 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
+   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module — apply all migrations, or the `/notifications/settings` page will fail.
 5. Start the dev server (or double-click `serve.bat`):
    ```bash
    C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public
@@ -151,7 +152,8 @@ php bin/console key:generate
 | `'php' is not recognized` | PHP is not on the PATH. Use the full path (`C:\xampp\php\php.exe`) or add `C:\xampp\php` to your system PATH. |
 | `could not find driver` | PostgreSQL drivers disabled. Uncomment `extension=pdo_pgsql` and `extension=pgsql` in `php.ini` and restart the server. |
 | `database "limsdb" does not exist` | Create the database and load `database/schema.sql`, `database/seed_data.sql`, then the migrations. |
-| `undefined table` / `undefined column` errors | Re-run all files under `database/migrations/` — several modules depend on them. |
+| `undefined table` / `undefined column` errors | Re-run all files under `database/migrations/` — several modules depend on them (e.g. `011_notification_settings.sql` for `/notifications/settings`). |
+| `relation "notification_settings" does not exist` | Run `database/migrations/011_notification_settings.sql`. Default rows are auto-created for each user on first visit to `/notifications/settings`. |
 | 500 on a specific module | Check `storage/logs/lims-error.log` — it logs the exact failing query with a stack trace. |
 
 ## Running Tests
