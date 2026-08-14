@@ -36,7 +36,8 @@ class BillingController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $customers = $db->query("SELECT id, customer_code, customer_name FROM customers WHERE is_active = TRUE ORDER BY customer_name")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('billing.form', ['invoice' => null, 'customers' => $customers]);
+        $samples = $db->query("SELECT id, sample_code FROM samples ORDER BY id DESC LIMIT 200")->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->render('billing.form', ['invoice' => null, 'customers' => $customers, 'samples' => $samples, 'items' => []]);
     }
 
     public function store(): void
@@ -97,7 +98,15 @@ class BillingController extends BaseController
         $invoice = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$invoice) { session_flash('error', 'Invoice not found.'); $this->redirect('/billing'); }
         $customers = $db->query("SELECT id, customer_code, customer_name FROM customers WHERE is_active = TRUE ORDER BY customer_name")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('billing.form', ['invoice' => $invoice, 'customers' => $customers]);
+        $samples = $db->query("SELECT id, sample_code FROM samples ORDER BY id DESC LIMIT 200")->fetchAll(\PDO::FETCH_ASSOC);
+        $items = $db->prepare("SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY id");
+        $items->execute([$id]);
+        return $this->render('billing.form', [
+            'invoice' => $invoice,
+            'customers' => $customers,
+            'samples' => $samples,
+            'items' => $items->fetchAll(\PDO::FETCH_ASSOC),
+        ]);
     }
 
     public function update(int $id): void

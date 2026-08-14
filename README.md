@@ -55,11 +55,17 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 
 | Component | Requirement |
 |-----------|-------------|
-| PHP | 8.0 – 8.3 |
-| Database | PostgreSQL 12+ (recommended: 16) |
-| Web Server | Apache with `mod_rewrite` (or Nginx) |
-| Extensions | `json`, `curl`, `session`, `mbstring`, `pdo_pgsql` |
+| PHP | 8.0 – 8.3 (PDO with `pdo_pgsql` enabled) |
+| Database | PostgreSQL 12+ (recommended: 16, tested on 18) |
+| Web Server | Apache with `mod_rewrite` (or Nginx, or PHP built-in server) |
+| Extensions | `json`, `curl`, `session`, `mbstring`, `pdo_pgsql`, `pgsql` |
 | Optional | `odbc` (SAP HANA), `dom` / `dompdf` (PDF COA) |
+
+> **XAMPP users:** enable the PostgreSQL drivers before starting — in `C:\xampp\php\php.ini` uncomment:
+> ```
+> extension=pdo_pgsql
+> extension=pgsql
+> ```
 
 ## Quick Start
 
@@ -82,20 +88,39 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    copy .env.example .env
    ```
-3. Create a PostgreSQL database and run the schema:
+   Set `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` to match your PostgreSQL server.
+3. Create the database (or `CREATE DATABASE limsdb;`) and load the schema + seed data:
    ```bash
-   psql -U lims_user -d limsdb -f database/schema.sql
-   psql -U lims_user -d limsdb -f database/seed_data.sql
+   psql -U postgres -d limsdb -f database/schema.sql
+   psql -U postgres -d limsdb -f database/seed_data.sql
    ```
-4. Run migrations:
+4. Run migrations (in filename order):
    ```bash
-   for %f in (database/migrations/*.sql) do psql -U lims_user -d limsdb -f "%f"
+   for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
-5. Start the dev server:
+5. Start the dev server (or double-click `serve.bat`):
    ```bash
-   php -S localhost:8000 -t public
+   C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public
    ```
-6. Open **http://localhost:8000** and log in.
+   Use `0.0.0.0` instead of `localhost` to access the app from phones/tablets on the same network.
+6. Open **http://localhost:8080** and log in.
+
+### Default Login
+
+| Username | Password |
+|----------|----------|
+| `admin` | `admin@123` |
+
+Other seeded users: `analyst`, `reviewer`, `approver`, `customer` — all use password `admin@123`.
+
+### Mobile / Tablet Access
+
+1. Start the server bound to all interfaces: `php -S 0.0.0.0:8080 -t public`
+2. Allow port 8080 through Windows Firewall (run as Administrator):
+   ```bash
+   New-NetFirewallRule -DisplayName "PlexiQ LIMS 8080" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
+   ```
+3. On the device (same Wi-Fi), open `http://<PC-LAN-IP>:8080` (find it with `ipconfig`).
 
 ### Installers
 
@@ -118,6 +143,16 @@ Generate an application key:
 ```bash
 php bin/console key:generate
 ```
+
+## Troubleshooting
+
+| Symptom | Cause & Fix |
+|---------|-------------|
+| `'php' is not recognized` | PHP is not on the PATH. Use the full path (`C:\xampp\php\php.exe`) or add `C:\xampp\php` to your system PATH. |
+| `could not find driver` | PostgreSQL drivers disabled. Uncomment `extension=pdo_pgsql` and `extension=pgsql` in `php.ini` and restart the server. |
+| `database "limsdb" does not exist` | Create the database and load `database/schema.sql`, `database/seed_data.sql`, then the migrations. |
+| `undefined table` / `undefined column` errors | Re-run all files under `database/migrations/` — several modules depend on them. |
+| 500 on a specific module | Check `storage/logs/lims-error.log` — it logs the exact failing query with a stack trace. |
 
 ## Running Tests
 

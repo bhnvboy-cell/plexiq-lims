@@ -343,7 +343,7 @@ $router->get('/api-management/webhooks/{id}/logs', [\App\Controllers\ApiIntegrat
 // BARCODE SCANNING
 // ============================================================
 $router->get('/barcode/scan', [\App\Controllers\BarcodeController::class, 'scan'], ['auth']);
-$router->post('/barcode/lookup', [\App\Controllers\BarcodeController::class, 'lookup'], ['auth']);
+$router->get('/barcode/lookup', [\App\Controllers\BarcodeController::class, 'lookup'], ['auth']);
 $router->get('/barcode/logs', [\App\Controllers\BarcodeController::class, 'scanLog'], ['auth']);
 $router->get('/barcode/print/{entityType}/{id}', [\App\Controllers\BarcodeController::class, 'printLabel'], ['auth']);
 
@@ -474,7 +474,10 @@ $router->post('/deviations/{id}/close', [\App\Controllers\DeviationController::c
 // ============================================================
 $router->get('/calibrations', [\App\Controllers\CalibrationEnhancedController::class, 'index'], ['auth']);
 $router->get('/calibrations/standards', [\App\Controllers\CalibrationEnhancedController::class, 'standards'], ['auth']);
+$router->get('/calibrations/standards/create', [\App\Controllers\CalibrationEnhancedController::class, 'createStandard'], ['auth']);
+$router->get('/calibrations/standards/{id}/edit', [\App\Controllers\CalibrationEnhancedController::class, 'editStandard'], ['auth']);
 $router->post('/calibrations/standards', [\App\Controllers\CalibrationEnhancedController::class, 'storeStandard'], ['auth']);
+$router->post('/calibrations/standards/{id}', [\App\Controllers\CalibrationEnhancedController::class, 'updateStandard'], ['auth']);
 $router->get('/calibrations/schedules', [\App\Controllers\CalibrationEnhancedController::class, 'schedules'], ['auth']);
 $router->post('/calibrations/schedules', [\App\Controllers\CalibrationEnhancedController::class, 'createSchedule'], ['auth']);
 $router->get('/calibrations/records/{instrumentId}', [\App\Controllers\CalibrationEnhancedController::class, 'records'], ['auth']);

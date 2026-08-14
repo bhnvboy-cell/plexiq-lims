@@ -50,7 +50,7 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT * FROM webhooks WHERE user_id = ? ORDER BY created_at DESC");
+        $stmt = $db->prepare("SELECT * FROM api_webhooks WHERE created_by = ? ORDER BY created_at DESC");
         $stmt->execute([Auth::id()]);
         $webhooks = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('api.webhooks', ['webhooks' => $webhooks]);
@@ -60,16 +60,16 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO webhooks (user_id, name, url, events, secret, is_active) VALUES (?, ?, ?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO api_webhooks (created_by, name, url, events, secret_key, is_active) VALUES (?, ?, ?, ?, ?, ?)")->execute([
             Auth::id(),
-            $_POST['name'],
+            $_POST['name'] ?? 'Webhook',
             $_POST['url'],
-            $_POST['events'] ?? '[]',
+            is_array($_POST['events'] ?? []) ? json_encode($_POST['events']) : ($_POST['events'] ?? '[]'),
             $_POST['secret'] ?? bin2hex(random_bytes(16)),
             !empty($_POST['is_active']),
         ]);
         $webhookId = $db->lastInsertId();
-        Audit::log('Webhook Created', 'webhooks', $webhookId);
+        Audit::log('Webhook Created', 'api_webhooks', $webhookId);
         session_flash('success', 'Webhook created.');
         $this->redirect('/api-management/webhooks');
     }
@@ -78,12 +78,12 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT is_active FROM webhooks WHERE id = ? AND user_id = ?");
+        $stmt = $db->prepare("SELECT is_active FROM api_webhooks WHERE id = ? AND created_by = ?");
         $stmt->execute([$id, Auth::id()]);
         $wh = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($wh) {
-            $db->prepare("UPDATE webhooks SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$wh['is_active'], $id]);
-            Audit::log('Webhook Toggled', 'webhooks', $id);
+            $db->prepare("UPDATE api_webhooks SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$wh['is_active'], $id]);
+            Audit::log('Webhook Toggled', 'api_webhooks', $id);
         }
         $this->redirect('/api-management/webhooks');
     }
@@ -92,10 +92,11 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT * FROM webhooks WHERE id = ? AND user_id = ?");
+        $stmt = $db->prepare("SELECT id, name, url, events, secret_key, is_active FROM api_webhooks WHERE id = ? AND created_by = ?");
         $stmt->execute([$id, Auth::id()]);
         $wh = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$wh) return $this->json(['error' => 'Not found'], 404);
+        $wh['secret'] = $wh['secret_key'];
         return $this->json($wh);
     }
 
@@ -103,14 +104,14 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE webhooks SET url = ?, events = ?, secret = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")->execute([
+        $db->prepare("UPDATE api_webhooks SET url = ?, events = ?, secret_key = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?")->execute([
             $_POST['url'],
             is_array($_POST['events'] ?? []) ? json_encode($_POST['events']) : ($_POST['events'] ?? '[]'),
             $_POST['secret'] ?? '',
             !empty($_POST['is_active']),
             $id, Auth::id(),
         ]);
-        Audit::log('Webhook Updated', 'webhooks', $id);
+        Audit::log('Webhook Updated', 'api_webhooks', $id);
         session_flash('success', 'Webhook updated.');
         $this->redirect('/api-management/webhooks');
     }
@@ -119,8 +120,8 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("DELETE FROM webhooks WHERE id = ? AND user_id = ?")->execute([$id, Auth::id()]);
-        Audit::log('Webhook Deleted', 'webhooks', $id);
+        $db->prepare("DELETE FROM api_webhooks WHERE id = ? AND created_by = ?")->execute([$id, Auth::id()]);
+        Audit::log('Webhook Deleted', 'api_webhooks', $id);
         session_flash('success', 'Webhook deleted.');
         $this->redirect('/api-management/webhooks');
     }

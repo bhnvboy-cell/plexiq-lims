@@ -7,7 +7,7 @@
     <div class="d-flex gap-2">
         <a href="/calibrations" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
         <?php if ($auth['role'] === 'Admin'): ?>
-        <a href="/calibrations/standards" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Standard</a>
+        <a href="/calibrations/standards/create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Standard</a>
         <?php endif; ?>
     </div>
 </div>
@@ -57,7 +57,7 @@
                     <td><?= ($s['is_active'] ?? true) ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></td>
                     <td class="text-end">
                         <?php if ($auth['role'] === 'Admin'): ?>
-                        <a href="/calibrations/standards?id=<?= $s['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <a href="/calibrations/standards/<?= $s['id'] ?>/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <?php endif; ?>
                     </td>
                 </tr>

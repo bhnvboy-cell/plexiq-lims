@@ -25,18 +25,42 @@ class CalibrationEnhancedController extends BaseController
             WHERE i.next_calibration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
             ORDER BY i.next_calibration_date
         ")->fetchAll(\PDO::FETCH_ASSOC);
-        $recent = $db->query("
-            SELECT cr.*, i.instrument_name, i.instrument_code, u.full_name AS performed_by_name
+        $stats = [
+            'overdue' => count($overdue),
+            'upcoming' => count($upcoming),
+            'completed_this_month' => (int)$db->query("SELECT COUNT(*) FROM calibration_records WHERE date_trunc('month', calibration_date) = date_trunc('month', CURRENT_DATE)")->fetchColumn(),
+            'total_standards' => (int)$db->query("SELECT COUNT(*) FROM calibration_standards")->fetchColumn(),
+        ];
+        $standards = $db->query("
+            SELECT * FROM calibration_standards
+            ORDER BY standard_name
+            LIMIT 10
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+        $schedules = $db->query("
+            SELECT cs.*, i.instrument_name, i.instrument_code, st.standard_name, u.full_name AS assigned_name
+            FROM calibration_schedules cs
+            LEFT JOIN instruments i ON cs.instrument_id = i.id
+            LEFT JOIN calibration_standards st ON cs.standard_id = st.id
+            LEFT JOIN users u ON cs.assigned_to = u.id
+            ORDER BY cs.next_due_date
+            LIMIT 10
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+        $records = $db->query("
+            SELECT cr.*, i.instrument_name, i.instrument_code, u.full_name AS performed_by_name, st.standard_name
             FROM calibration_records cr
-            JOIN instruments i ON cr.instrument_id = i.id
+            LEFT JOIN instruments i ON cr.instrument_id = i.id
             LEFT JOIN users u ON cr.performed_by = u.id
+            LEFT JOIN calibration_standards st ON cr.standard_id = st.id
             ORDER BY cr.calibration_date DESC
-            LIMIT 20
+            LIMIT 10
         ")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('calibrations-enhanced.index', [
+            'stats' => $stats,
+            'standards' => $standards,
+            'schedules' => $schedules,
+            'records' => $records,
             'overdue' => $overdue,
             'upcoming' => $upcoming,
-            'recent' => $recent,
         ]);
     }
 
@@ -45,9 +69,8 @@ class CalibrationEnhancedController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $standards = $db->query("
-            SELECT cs.*, u.full_name AS certified_by_name
+            SELECT cs.*
             FROM calibration_standards cs
-            LEFT JOIN users u ON cs.certified_by = u.id
             ORDER BY cs.standard_name
         ")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('calibrations-enhanced.standards', ['standards' => $standards]);
@@ -59,24 +82,56 @@ class CalibrationEnhancedController extends BaseController
         return $this->render('calibrations-enhanced.standard-form', ['standard' => null]);
     }
 
+    public function editStandard(int $id): string
+    {
+        Auth::requireRole('Admin');
+        $db = \App\Helpers\Database::connect();
+        $stmt = $db->prepare("SELECT * FROM calibration_standards WHERE id = ?");
+        $stmt->execute([$id]);
+        $standard = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$standard) { session_flash('error', 'Standard not found.'); $this->redirect('/calibrations/standards'); }
+        return $this->render('calibrations-enhanced.standard-form', ['standard' => $standard]);
+    }
+
     public function storeStandard(): void
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO calibration_standards (standard_name, standard_type, identification, certificate_number, certification_date, expiry_date, certified_by, certificate_file, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO calibration_standards (standard_code, standard_name, standard_type, serial_number, certificate_number, calibration_interval_days, last_calibration_date, next_calibration_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
+            $_POST['standard_code'],
             $_POST['standard_name'],
             $_POST['standard_type'] ?? 'Reference',
-            $_POST['identification'] ?? null,
+            $_POST['serial_number'] ?? null,
             $_POST['certificate_number'] ?? null,
-            $_POST['certification_date'] ?? null,
-            $_POST['expiry_date'] ?? null,
-            Auth::id(),
-            $_POST['certificate_file'] ?? null,
-            !empty($_POST['is_active']),
+            $_POST['calibration_interval_days'] ?: null,
+            $_POST['last_calibration_date'] ?? null,
+            $_POST['next_calibration_date'] ?? null,
+            $_POST['notes'] ?? null,
         ]);
         $stdId = $db->lastInsertId();
         Audit::log('Calibration Standard Created', 'calibration_standards', $stdId);
         session_flash('success', 'Calibration standard created.');
+        $this->redirect('/calibrations/standards');
+    }
+
+    public function updateStandard(int $id): void
+    {
+        Auth::requireRole('Admin');
+        $db = \App\Helpers\Database::connect();
+        $db->prepare("UPDATE calibration_standards SET standard_code=?, standard_name=?, standard_type=?, serial_number=?, certificate_number=?, calibration_interval_days=?, last_calibration_date=?, next_calibration_date=?, notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")->execute([
+            $_POST['standard_code'],
+            $_POST['standard_name'],
+            $_POST['standard_type'] ?? 'Reference',
+            $_POST['serial_number'] ?? null,
+            $_POST['certificate_number'] ?? null,
+            $_POST['calibration_interval_days'] ?: null,
+            $_POST['last_calibration_date'] ?? null,
+            $_POST['next_calibration_date'] ?? null,
+            $_POST['notes'] ?? null,
+            $id,
+        ]);
+        Audit::log('Calibration Standard Updated', 'calibration_standards', $id);
+        session_flash('success', 'Calibration standard updated.');
         $this->redirect('/calibrations/standards');
     }
 
@@ -85,12 +140,22 @@ class CalibrationEnhancedController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $schedules = $db->query("
-            SELECT cs.*, i.instrument_name, i.instrument_code
+            SELECT cs.*, i.instrument_name, i.instrument_code, st.standard_name, u.full_name AS assigned_name
             FROM calibration_schedules cs
-            JOIN instruments i ON cs.instrument_id = i.id
+            LEFT JOIN instruments i ON cs.instrument_id = i.id
+            LEFT JOIN calibration_standards st ON cs.standard_id = st.id
+            LEFT JOIN users u ON cs.assigned_to = u.id
             ORDER BY cs.next_due_date
         ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('calibrations-enhanced.schedules', ['schedules' => $schedules]);
+        $instruments = $db->query("SELECT id, instrument_code, instrument_name FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(\PDO::FETCH_ASSOC);
+        $standards = $db->query("SELECT id, standard_code, standard_name FROM calibration_standards ORDER BY standard_name")->fetchAll(\PDO::FETCH_ASSOC);
+        $users = $db->query("SELECT id, username, full_name FROM users ORDER BY full_name")->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->render('calibrations-enhanced.schedules', [
+            'schedules' => $schedules,
+            'instruments' => $instruments,
+            'standards' => $standards,
+            'users' => $users,
+        ]);
     }
 
     public function createSchedule(): string
@@ -98,21 +163,22 @@ class CalibrationEnhancedController extends BaseController
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
         $instruments = $db->query("SELECT id, instrument_code, instrument_name FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(\PDO::FETCH_ASSOC);
-        $frequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annually', 'Annually', 'Biennially'];
-        return $this->render('calibrations-enhanced.schedule-form', ['schedule' => null, 'instruments' => $instruments, 'frequencies' => $frequencies]);
+        $standards = $db->query("SELECT id, standard_code, standard_name FROM calibration_standards ORDER BY standard_name")->fetchAll(\PDO::FETCH_ASSOC);
+        $users = $db->query("SELECT id, username, full_name FROM users ORDER BY full_name")->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->render('calibrations-enhanced.schedules', ['schedules' => [], 'instruments' => $instruments, 'standards' => $standards, 'users' => $users]);
     }
 
     public function storeSchedule(): void
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO calibration_schedules (instrument_id, frequency, last_due_date, next_due_date, assigned_to, notes) VALUES (?, ?, ?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO calibration_schedules (instrument_id, standard_id, frequency_days, last_due_date, next_due_date, assigned_to) VALUES (?, ?, ?, ?, ?, ?)")->execute([
             $_POST['instrument_id'],
-            $_POST['frequency'],
+            $_POST['standard_id'] ?: null,
+            $_POST['frequency_days'] ?? 365,
             $_POST['last_due_date'] ?? null,
-            $_POST['next_due_date'],
+            $_POST['next_due_date'] ?? null,
             $_POST['assigned_to'] ?: null,
-            $_POST['notes'] ?? null,
         ]);
         Audit::log('Calibration Schedule Created', 'calibration_schedules', null, null, ['instrument_id' => $_POST['instrument_id']]);
         session_flash('success', 'Schedule created.');
@@ -176,7 +242,7 @@ class CalibrationEnhancedController extends BaseController
         $db = \App\Helpers\Database::connect();
         $overdue = $db->query("
             SELECT i.id, i.instrument_code, i.instrument_name, i.next_calibration_date,
-                DATEDIFF(DAY, i.next_calibration_date, CURRENT_DATE) AS days_overdue
+                (CURRENT_DATE - i.next_calibration_date) AS days_overdue
             FROM instruments i
             WHERE i.next_calibration_date IS NOT NULL AND i.next_calibration_date < CURRENT_DATE
             ORDER BY days_overdue DESC
