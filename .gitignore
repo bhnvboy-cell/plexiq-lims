@@ -11,6 +11,8 @@ storage/coa/*
 !storage/coa/.gitkeep
 storage/logs/*
 !storage/logs/.gitkeep
+storage/cache/*
+!storage/cache/.gitkeep
 storage/sessions/*
 !storage/sessions/.gitkeep
 storage/installer/*

@@ -270,6 +270,34 @@ if (!function_exists('format_money')) {
     }
 }
 
+if (!function_exists('cache_get')) {
+    function cache_get(string $key, $default = null)
+    {
+        return \App\Helpers\Cache::get($key, $default);
+    }
+}
+
+if (!function_exists('cache_put')) {
+    function cache_put(string $key, $value, ?int $ttl = null): void
+    {
+        \App\Helpers\Cache::put($key, $value, $ttl);
+    }
+}
+
+if (!function_exists('cache_remember')) {
+    function cache_remember(string $key, $ttl, callable $callback)
+    {
+        return \App\Helpers\Cache::remember($key, $ttl, $callback);
+    }
+}
+
+if (!function_exists('cache_forget')) {
+    function cache_forget(string $key): void
+    {
+        \App\Helpers\Cache::forget($key);
+    }
+}
+
 if (!function_exists('status_badge')) {
     function status_badge(string $status): string
     {

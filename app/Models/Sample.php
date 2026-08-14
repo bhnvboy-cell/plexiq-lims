@@ -111,18 +111,25 @@ class Sample extends BaseModel
 
     public static function dashboardStats(): array
     {
-        $db = \App\Helpers\Database::connect();
-        $stats = [];
+        return \App\Helpers\Cache::remember('dashboard.stats', 60, function () {
+            $db = \App\Helpers\Database::connect();
+            $stats = [];
 
-        $stats['total'] = (int)$db->query("SELECT COUNT(*) FROM samples")->fetchColumn();
-        $stats['registered'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Registered'")->fetchColumn();
-        $stats['in_progress'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'In Progress'")->fetchColumn();
-        $stats['reviewed'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Reviewed'")->fetchColumn();
-        $stats['approved'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Approved'")->fetchColumn();
-        $stats['coa_released'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'COA Released'")->fetchColumn();
-        $stats['urgent'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE priority = 'Urgent' AND status NOT IN ('COA Released','Rejected')")->fetchColumn();
-        $stats['overdue'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE target_completion_date < CURRENT_DATE AND status NOT IN ('COA Released','Rejected')")->fetchColumn();
+            $stats['total'] = (int)$db->query("SELECT COUNT(*) FROM samples")->fetchColumn();
+            $stats['registered'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Registered'")->fetchColumn();
+            $stats['in_progress'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'In Progress'")->fetchColumn();
+            $stats['reviewed'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Reviewed'")->fetchColumn();
+            $stats['approved'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'Approved'")->fetchColumn();
+            $stats['coa_released'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE status = 'COA Released'")->fetchColumn();
+            $stats['urgent'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE priority = 'Urgent' AND status NOT IN ('COA Released','Rejected')")->fetchColumn();
+            $stats['overdue'] = (int)$db->query("SELECT COUNT(*) FROM samples WHERE target_completion_date < CURRENT_DATE AND status NOT IN ('COA Released','Rejected')")->fetchColumn();
 
-        return $stats;
+            return $stats;
+        });
+    }
+
+    public static function flushDashboardCache(): void
+    {
+        \App\Helpers\Cache::forget('dashboard.stats');
     }
 }

@@ -193,21 +193,21 @@ class CalibrationEnhancedController extends BaseController
         $stmt->execute([$instrumentId]);
         $instrument = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$instrument) { session_flash('error', 'Instrument not found.'); $this->redirect('/calibrations'); }
-        $records = $db->prepare("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT cr.*, u.full_name AS performed_by_name, cs.standard_name
             FROM calibration_records cr
             LEFT JOIN users u ON cr.performed_by = u.id
             LEFT JOIN calibration_standards cs ON cr.standard_id = cs.id
             WHERE cr.instrument_id = ?
-            ORDER BY cr.calibration_date DESC
-            LIMIT 100
-        ");
-        $records->execute([$instrumentId]);
+        ", "
+            SELECT COUNT(*) FROM calibration_records cr WHERE cr.instrument_id = ?
+        ", [$instrumentId], 20, 'cr.calibration_date DESC');
         $standards = $db->query("SELECT id, standard_name FROM calibration_standards WHERE status = 'Active' ORDER BY standard_name")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('calibrations-enhanced.records', [
             'instrument' => $instrument,
-            'records' => $records->fetchAll(\PDO::FETCH_ASSOC),
+            'records' => $result['items'],
             'standards' => $standards,
+            'paginator' => $result,
         ]);
     }
 

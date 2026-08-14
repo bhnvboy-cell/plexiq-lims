@@ -67,6 +67,50 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 > extension=pgsql
 > ```
 
+## Scalability & Performance
+
+PlexiQ ships with production-grade scalability features that are safe to enable as traffic grows:
+
+| Feature | How to enable | Notes |
+|---------|--------------|-------|
+| **List pagination** | On by default | All large list pages (billing, COA, deviations, ELN, stability, notifications, calibrations, inventory) paginate at 20 rows/page with prev/next controls and a record count. |
+| **Dashboard caching** | `CACHE_DRIVER=file` in `.env` | Dashboard stats and recent samples are cached for 60s; caches are invalidated automatically when samples change. `redis` is supported for multi-node setups. |
+| **Database sessions** | `SESSION_DRIVER=database` | Sessions stored in the `sessions` table — required when running multiple web servers behind a load balancer (file sessions won't share). |
+| **Async job queue** | `QUEUE_DRIVER=database` + run the worker | Webhook deliveries are enqueued and processed in the background instead of blocking requests. See "Queue Worker" below. |
+| **Performance indexes** | Apply `database/migrations/012_scalability.sql` | Adds the `jobs` and `sessions` tables plus ~16 high-traffic query indexes. |
+
+### Queue Worker
+
+Webhooks (e.g. `sample.created`, sample status changes) are delivered asynchronously through the `jobs` table. Start the worker in production:
+
+```bash
+php bin/worker.php                          # run forever
+php bin/worker.php --once                   # process a single job
+php bin/worker.php --queue=webhooks --stop-when-empty
+```
+
+Monitor via the CLI console: `php bin/console queue:monitor` (also lists pending/failed counts). Failed jobs are retried up to 3 times with exponential backoff.
+
+### Console Commands
+
+```bash
+php bin/console queue:work --queue=webhooks --once
+php bin/console queue:monitor
+php bin/console cache:clear
+```
+
+### Production Deployment
+
+Reference configs live in `deploy/`:
+
+- `deploy/nginx.conf` — Nginx virtual host (front controller, static asset caching, hardened headers)
+- `deploy/php-fpm.conf` — PHP-FPM pool (static sizing, slow-log, hard limits)
+- `.env.example` — production environment template (disable debug, generate a real `APP_KEY`)
+
+### Client Portal
+
+Customers log in at **/client/login** (register at /client/register). Customer-role accounts land on `/client/dashboard` automatically after sign-in; a "Customer Portal" link is shown on the staff login page. Seeded customers: `customer`, `customer1` (password `admin@123`).
+
 ## Quick Start
 
 ### Docker (Recommended)
@@ -98,7 +142,7 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
-   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module — apply all migrations, or the `/notifications/settings` page will fail.
+   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver) — apply all migrations, or the affected pages will fail.
 5. Start the dev server (or double-click `serve.bat`):
    ```bash
    C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public

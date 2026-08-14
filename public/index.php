@@ -9,11 +9,6 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../storage/logs/lims-error.log');
 
-// Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Autoload
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -33,6 +28,15 @@ if (file_exists($envFile)) {
 
 // Load helpers
 require_once __DIR__ . '/../app/Helpers/helpers.php';
+
+// Start session (optionally database-backed for multi-instance deployments)
+if (session_status() === PHP_SESSION_NONE) {
+    if (getenv('SESSION_DRIVER') === 'database' || ($_ENV['SESSION_DRIVER'] ?? '') === 'database') {
+        $sessionHandler = new \App\Helpers\SessionHandler();
+        session_set_save_handler($sessionHandler, true);
+    }
+    session_start();
+}
 
 // Initialize router
 $router = new \App\Router();

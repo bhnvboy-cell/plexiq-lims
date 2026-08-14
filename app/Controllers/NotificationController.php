@@ -21,16 +21,13 @@ class NotificationController extends BaseController
             $where .= " AND n.notification_type = ?";
             $params[] = $filterType;
         }
-        $stmt = $db->prepare("
-            SELECT n.*, n.notification_type AS type, n.sent_at AS created_at, n.link AS action_url, n.link AS related_entity, u.full_name AS triggered_by_name
+        $result = \App\Helpers\Pagination::run($db, "
+            SELECT n.*, n.notification_type AS type, n.sent_at AS created_at, n.link AS action_url, n.link AS related_entity
             FROM notifications n
-            LEFT JOIN users u ON n.triggered_by = u.id
             WHERE {$where}
-            ORDER BY n.sent_at DESC
-            LIMIT 50
-        ");
-        $stmt->execute($params);
-        $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        ", "
+            SELECT COUNT(*) FROM notifications n WHERE {$where}
+        ", $params, 20, 'n.sent_at DESC');
         $counts = [
             'all' => 0,
             'unread' => 0,
@@ -47,10 +44,11 @@ class NotificationController extends BaseController
             if (isset($counts[$row['notification_type']])) { $counts[$row['notification_type']]++; }
         }
         return $this->render('notifications.index', [
-            'notifications' => $notifications,
+            'notifications' => $result['items'],
             'unreadCount' => $counts['unread'],
             'filterType' => $filterType,
             'counts' => $counts,
+            'paginator' => $result,
         ]);
     }
 

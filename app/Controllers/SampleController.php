@@ -103,6 +103,13 @@ class SampleController extends BaseController
 
             $db->commit();
 
+            Sample::flushDashboardCache();
+            try {
+                \App\Services\WebhookDispatcher::dispatch('sample.created', ['sample_id' => $sampleId, 'sample_code' => $sampleCode]);
+            } catch (\Throwable $e) {
+                error_log('Webhook dispatch failed: ' . $e->getMessage());
+            }
+
             Audit::log('Sample Created', 'samples', $sampleId, null, ['sample_code' => $sampleCode]);
             session_flash('success', "Sample {$sampleCode} created successfully.");
             redirect('/samples');
@@ -256,6 +263,13 @@ class SampleController extends BaseController
         $params[] = $id;
 
         $stmt->execute($params);
+
+        Sample::flushDashboardCache();
+        try {
+            \App\Services\WebhookDispatcher::dispatch('sample.' . strtolower(str_replace(' ', '_', $newStatus)), ['sample_id' => $id, 'status' => $newStatus]);
+        } catch (\Throwable $e) {
+            error_log('Webhook dispatch failed: ' . $e->getMessage());
+        }
 
         Audit::log('Sample Status Changed', 'samples', $id, ['status' => $currentStatus], ['status' => $newStatus]);
         session_flash('success', "Sample status changed to {$newStatus}.");

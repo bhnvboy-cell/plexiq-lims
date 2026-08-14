@@ -19,24 +19,23 @@ class BillingController extends BaseController
             $where = 'WHERE i.status = ?';
             $params[] = $status;
         }
-        $invoices = $db->prepare("
+        $invoices = \App\Helpers\Pagination::run($db, "
             SELECT i.*, c.customer_name, c.customer_code,
                 (SELECT COALESCE(SUM(ip.amount), 0) FROM payments ip WHERE ip.invoice_id = i.id) AS paid_amount
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
             {$where}
-            ORDER BY i.created_at DESC
-            LIMIT 100
-        ");
-        $invoices->execute($params);
-        $rows = $invoices->fetchAll(\PDO::FETCH_ASSOC);
+        ", "
+            SELECT COUNT(*) FROM invoices i {$where}
+        ", $params, 20, 'i.created_at DESC');
+        $rows = $invoices['items'];
         foreach ($rows as &$inv) {
             $total = (float)($inv['total_amount'] ?? 0);
             $paid = (float)($inv['paid_amount'] ?? 0);
             $inv['payment_status'] = $paid >= $total && $total > 0 ? 'Paid' : ($paid > 0 ? 'Partial' : 'Pending');
         }
         unset($inv);
-        return $this->render('billing.index', ['invoices' => $rows]);
+        return $this->render('billing.index', ['invoices' => $rows, 'paginator' => $invoices]);
     }
 
     public function create(): string

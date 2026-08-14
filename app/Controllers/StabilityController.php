@@ -12,16 +12,16 @@ class StabilityController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $studies = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT s.*, p.product_name, b.batch_number, u.full_name AS created_by_name
             FROM stability_studies s
             LEFT JOIN products p ON s.product_id = p.id
             LEFT JOIN batches b ON s.batch_id = b.id
             LEFT JOIN users u ON s.created_by = u.id
-            ORDER BY s.created_at DESC
-            LIMIT 50
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('stability.index', ['studies' => $studies]);
+        ", "
+            SELECT COUNT(*) FROM stability_studies s
+        ", [], 20, 's.created_at DESC');
+        return $this->render('stability.index', ['studies' => $result['items'], 'paginator' => $result]);
     }
 
     public function create(): string

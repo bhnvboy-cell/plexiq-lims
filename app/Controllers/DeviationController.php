@@ -19,17 +19,16 @@ class DeviationController extends BaseController
             $where = 'WHERE d.status = ?';
             $params[] = $status;
         }
-        $deviations = $db->prepare("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT d.*, u.full_name AS reported_by_name, p.product_name
             FROM deviations d
             LEFT JOIN users u ON d.reported_by = u.id
             LEFT JOIN products p ON d.product_id = p.id
             {$where}
-            ORDER BY d.created_at DESC
-            LIMIT 100
-        ");
-        $deviations->execute($params);
-        return $this->render('deviations.index', ['deviations' => $deviations->fetchAll(\PDO::FETCH_ASSOC)]);
+        ", "
+            SELECT COUNT(*) FROM deviations d {$where}
+        ", $params, 20, 'd.created_at DESC');
+        return $this->render('deviations.index', ['deviations' => $result['items'], 'paginator' => $result]);
     }
 
     public function create(): string

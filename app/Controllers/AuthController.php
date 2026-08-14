@@ -27,7 +27,8 @@ class AuthController extends BaseController
 
         if (Auth::login($username, $password)) {
             session_flash('success', 'Welcome back, ' . ($_SESSION['user_name'] ?? '') . '!');
-            $redirect = $_SESSION['_redirect_after_login'] ?? '/dashboard';
+            $default = ($_SESSION['user_role'] ?? '') === 'Customer' ? '/client/dashboard' : '/dashboard';
+            $redirect = $_SESSION['_redirect_after_login'] ?? $default;
             unset($_SESSION['_redirect_after_login']);
             redirect($redirect);
         }

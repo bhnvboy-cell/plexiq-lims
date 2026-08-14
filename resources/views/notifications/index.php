@@ -88,11 +88,12 @@
         </div>
     </div>
 </div>
+<?php include __DIR__ . '/../partials/pagination.php'; ?>
 
 <script>
 function markAllRead() {
     if (!confirm('Mark all notifications as read?')) return;
-    fetch('/notifications/mark-all-read', { method: 'POST', headers: { 'X-CSRF-Token': '<?= csrf_token() ?>' } })
+    fetch('/notifications/read-all', { method: 'POST', headers: { 'X-CSRF-Token': '<?= csrf_token() ?>' } })
         .then(r => r.json())
         .then(d => { if (d.success) location.reload(); })
         .catch(() => alert('Failed to mark all as read.'));

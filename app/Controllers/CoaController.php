@@ -34,7 +34,7 @@ class CoaController extends BaseController
             }
         }
 
-        $stmt = $db->prepare("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT cd.*, s.sample_code, c.customer_name, p.product_name,
                    u.full_name AS generated_by_name
             FROM coa_documents cd
@@ -43,12 +43,14 @@ class CoaController extends BaseController
             LEFT JOIN products p ON s.product_id = p.id
             LEFT JOIN users u ON cd.generated_by = u.id
             {$where}
-            ORDER BY cd.generated_at DESC
-            LIMIT 100
-        ");
-        $stmt->execute($params);
+        ", "
+            SELECT COUNT(*)
+            FROM coa_documents cd
+            JOIN samples s ON cd.sample_id = s.id
+            {$where}
+        ", $params, 20, 'cd.generated_at DESC');
 
-        return $this->render('coa.index', ['documents' => $stmt->fetchAll()]);
+        return $this->render('coa.index', ['documents' => $result['items'], 'paginator' => $result]);
     }
 
     public function generate(int $sampleId): void

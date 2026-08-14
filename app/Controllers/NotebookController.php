@@ -12,14 +12,14 @@ class NotebookController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $entries = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT n.*, u.full_name AS created_by_name
             FROM eln_entries n
             LEFT JOIN users u ON n.created_by = u.id
-            ORDER BY n.created_at DESC
-            LIMIT 100
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('notebooks.index', ['entries' => $entries]);
+        ", "
+            SELECT COUNT(*) FROM eln_entries n
+        ", [], 20, 'n.created_at DESC');
+        return $this->render('notebooks.index', ['entries' => $result['items'], 'paginator' => $result]);
     }
 
     public function create(): string

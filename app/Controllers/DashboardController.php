@@ -13,13 +13,15 @@ class DashboardController extends BaseController
     {
         Auth::requireAuth();
         $stats = Sample::dashboardStats();
-        $recentSamples = \App\Helpers\Database::connect()->query("
-            SELECT s.*, c.customer_name, p.product_name
-            FROM samples s
-            LEFT JOIN customers c ON s.customer_id = c.id
-            LEFT JOIN products p ON s.product_id = p.id
-            ORDER BY s.created_at DESC LIMIT 10
-        ")->fetchAll();
+        $recentSamples = \App\Helpers\Cache::remember('dashboard.recent_samples', 60, function () {
+            return \App\Helpers\Database::connect()->query("
+                SELECT s.*, c.customer_name, p.product_name
+                FROM samples s
+                LEFT JOIN customers c ON s.customer_id = c.id
+                LEFT JOIN products p ON s.product_id = p.id
+                ORDER BY s.created_at DESC LIMIT 10
+            ")->fetchAll();
+        });
 
         $pendingTests = SampleTest::pendingCount();
         $inProgressTests = SampleTest::inProgressCount();

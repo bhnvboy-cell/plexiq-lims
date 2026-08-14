@@ -56,6 +56,25 @@ switch ($command) {
         echo "Application key generated: {$key}\n";
         break;
 
+    case 'cache:clear':
+        \App\Helpers\Cache::flush();
+        echo "Application cache cleared.\n";
+        break;
+
+    case 'queue:work':
+        $args = array_slice($argv, 2);
+        array_unshift($args, 'worker');
+        require __DIR__ . '/worker.php';
+        break;
+
+    case 'queue:monitor':
+        $pending = \App\Helpers\JobQueue::countPending();
+        $failed = \App\Helpers\JobQueue::countFailed();
+        echo "Queue monitor\n";
+        echo "  Pending: {$pending}\n";
+        echo "  Failed:  {$failed}\n";
+        break;
+
     case 'help':
     default:
         echo "Advanced LIMS Console\n";
@@ -63,5 +82,8 @@ switch ($command) {
         echo "Commands:\n";
         echo "  sap:sync       Run SAP HANA scheduled sync\n";
         echo "  key:generate   Generate application encryption key\n";
+        echo "  cache:clear    Flush the application cache\n";
+        echo "  queue:work     Start the async job worker (see bin/worker.php --help)\n";
+        echo "  queue:monitor  Show pending/failed job counts\n";
         break;
 }

@@ -39,4 +39,5 @@
         </table>
     </div>
 </div>
+<?php include __DIR__ . '/../partials/pagination.php'; ?>
 <?php $content = ob_get_clean(); require __DIR__ . '/../layouts/app.php'; ?>
