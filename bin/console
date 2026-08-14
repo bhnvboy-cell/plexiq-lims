@@ -124,6 +124,11 @@ switch ($command) {
         echo "Pruned {$removed} old backup(s).\n";
         break;
 
+    case 'instrument:scan':
+        $result = (new \App\Services\AnalysisParameterService())->importFromWatchDirectories();
+        echo "Instrument watch scan dispatched {$result['dispatched']} import job(s).\n";
+        break;
+
     case 'help':
     default:
         echo "Advanced LIMS Console\n";
@@ -138,5 +143,6 @@ switch ($command) {
         echo "  backup:list    List stored backups\n";
         echo "  backup:restore Restore a backup (destructive)\n";
         echo "  backup:prune   Delete old backups beyond retention\n";
+        echo "  instrument:scan Dispatch watch-directory import jobs\n";
         break;
 }

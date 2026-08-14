@@ -19,6 +19,8 @@ storage/sessions/*
 !storage/sessions/.gitkeep
 storage/installer/*
 !storage/installer/.gitkeep
+storage/instrument-imports/*
+!storage/instrument-imports/.gitkeep
 storage/coverage/
 
 # PHPUnit cache

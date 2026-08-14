@@ -5,7 +5,13 @@
         <span class="text-muted small"><?= count($instruments) ?> instrument(s) registered</span>
     </div>
     <?php if ($auth['role'] === 'Admin'): ?>
-    <a href="/instruments/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Instrument</a>
+    <div>
+        <form method="POST" action="/instruments/scan" class="d-inline me-2">
+            <?= csrf_field() ?>
+            <button class="btn btn-outline-secondary"><i class="bi bi-folder-symlink me-1"></i>Scan Watch Folders</button>
+        </form>
+        <a href="/instruments/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Instrument</a>
+    </div>
     <?php endif; ?>
 </div>
 
@@ -45,7 +51,8 @@
                     <td><?= $inst['auto_import'] ? '<span class="badge bg-success bg-opacity-10 text-success">Yes</span>' : '<span class="badge bg-secondary bg-opacity-10 text-secondary">No</span>' ?></td>
                     <td><?= $inst['is_active'] ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></td>
                     <td class="text-end">
-                        <a href="/instruments/<?= $inst['id'] ?>/import" class="btn btn-sm btn-outline-info me-1"><i class="bi bi-upload"></i></a>
+                        <a href="/instruments/<?= $inst['id'] ?>/import" class="btn btn-sm btn-outline-info me-1" title="Import"><i class="bi bi-upload"></i></a>
+                        <a href="/instruments/<?= $inst['id'] ?>/mappings" class="btn btn-sm btn-outline-primary me-1" title="Column Mapping"><i class="bi bi-diagram-3"></i></a>
                         <?php if ($auth['role'] === 'Admin'): ?>
                         <a href="/instruments/<?= $inst['id'] ?>/edit" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
                         <form method="POST" action="/instruments/<?= $inst['id'] ?>/delete" class="d-inline" onsubmit="return confirm('Delete this instrument?')">

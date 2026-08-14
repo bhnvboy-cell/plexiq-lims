@@ -21,6 +21,7 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 - OOS (Out-of-Specification) investigations
 - CAPA (Corrective and Preventive Actions)
 - Deviation management with action tracking
+- Analysis parameter management (spec limits, per-sample assignment, Analyst -> Reviewer -> Approver result workflow)
 - SPC control charts (X-bar, R, Sigma)
 - Stability studies with multi-timepoint tracking
 
@@ -33,7 +34,7 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 
 **Integrations**
 - SAP HANA (OData + ODBC, bidirectional sync)
-- Instrument file import (CSV, XML, text parsers)
+- Instrument file import (CSV, XML, text parsers) with column-to-parameter mapping and auto-fetch from watch folders
 - REST API with token authentication & webhooks
 - SSO provider support
 - Email notifications with per-user preference settings
@@ -142,7 +143,7 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
-   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver). `013_backup.sql` adds the `backup_settings`/`backup_runs` tables used by the Backup & Restore module — apply all migrations, or the affected pages will fail.
+   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver). `013_backup.sql` adds the `backup_settings`/`backup_runs` tables used by the Backup & Restore module, and `014_analysis_parameters.sql` adds the analysis parameter master, sample/batch assignments and instrument column mapping used by the Analysis Parameters module — apply all migrations, or the affected pages will fail.
 5. Start the dev server (or double-click `serve.bat`):
    ```bash
    C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public public/router.php
@@ -226,6 +227,24 @@ php bin/console backup:prune
 | `PSQL_PATH` | Path to `psql.exe` (auto-detected if empty) |
 
 Restore replays the dump with `psql -v ON_ERROR_STOP=1`, so any SQL error aborts the restore. Every operation is written to the audit trail.
+
+### Analysis Parameters & Instrument Auto-Fetch
+
+Migration `014_analysis_parameters.sql` adds the parameter master (`analysis_parameters`), per-sample and per-batch assignments (`sample_analysis_parameters`, `batch_analysis_parameters`), and instrument column mapping (`instrument_parameter_mapping`).
+
+**Parameter workflow** — Administrators define parameters with spec limits, data type and method. Analysts assign parameters to a sample (`/samples/{id}/parameters`), then record results. Results flow through **Completed -> Reviewed -> Approved**; approvals auto-feed the SPC module, and any out-of-spec result auto-creates an OOS record (OOS-xxx) with notifications to Reviewers/Approvers.
+
+**Instrument mapping & auto-fetch** — On **Instruments -> Column Mapping** (`/instruments/{id}/mappings`) an admin maps a source column (header in the instrument file) to an analysis parameter with an optional conversion factor and unit. Uploading a file from the instrument's Import page enqueues an `ImportInstrumentFile` job (queue `imports`) instead of blocking the request; the worker parses the file, resolves each row to a sample by `sample_code`, converts the value, writes `sample_analysis_parameters` (spec validation + auto-OOS) and records the raw row in `instrument_results` with the `source_file` for dedupe/audit.
+
+```bash
+# Process queued instrument imports (add to cron / Scheduled Task)
+php bin/worker.php --queue=imports --stop-when-empty
+
+# Scan all auto-import instruments' watch folders and enqueue new files
+php bin/console instrument:scan
+```
+
+`ImportInstrumentFile` and `WatchInstrumentDirectories` jobs run on the `imports` queue. Every import, assignment and workflow step is written to the audit trail.
 
 ## Troubleshooting
 

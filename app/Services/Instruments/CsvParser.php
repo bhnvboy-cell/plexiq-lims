@@ -75,16 +75,24 @@ class CsvParser implements InstrumentParserInterface
             if (count($row) < 2) continue;
 
             $entry = [
-                'sample_code' => $fieldIndices['sample_code'] !== null ? trim($row[$fieldIndices['sample_code']] ?? '') : null,
-                'test_code' => $fieldIndices['test_code'] !== null ? trim($row[$fieldIndices['test_code']] ?? '') : null,
-                'test_name' => $fieldIndices['test_name'] !== null ? trim($row[$fieldIndices['test_name']] ?? '') : null,
-                'result_value' => $fieldIndices['result_value'] !== null ? trim($row[$fieldIndices['result_value']] ?? '') : null,
-                'result_text' => $fieldIndices['result_text'] !== null ? trim($row[$fieldIndices['result_text']] ?? '') : null,
-                'unit' => $fieldIndices['unit'] !== null ? trim($row[$fieldIndices['unit']] ?? '') : null,
-                'method' => $fieldIndices['method'] !== null ? trim($row[$fieldIndices['method']] ?? '') : null,
-                'timestamp' => $fieldIndices['timestamp'] !== null ? trim($row[$fieldIndices['timestamp']] ?? '') : null,
+                'sample_code' => ($fieldIndices['sample_code'] ?? null) !== null ? trim($row[$fieldIndices['sample_code']] ?? '') : null,
+                'test_code' => ($fieldIndices['test_code'] ?? null) !== null ? trim($row[$fieldIndices['test_code']] ?? '') : null,
+                'test_name' => ($fieldIndices['test_name'] ?? null) !== null ? trim($row[$fieldIndices['test_name']] ?? '') : null,
+                'result_value' => ($fieldIndices['result_value'] ?? null) !== null ? trim($row[$fieldIndices['result_value']] ?? '') : null,
+                'result_text' => ($fieldIndices['result_text'] ?? null) !== null ? trim($row[$fieldIndices['result_text']] ?? '') : null,
+                'unit' => ($fieldIndices['unit'] ?? null) !== null ? trim($row[$fieldIndices['unit']] ?? '') : null,
+                'method' => ($fieldIndices['method'] ?? null) !== null ? trim($row[$fieldIndices['method']] ?? '') : null,
+                'timestamp' => ($fieldIndices['timestamp'] ?? null) !== null ? trim($row[$fieldIndices['timestamp']] ?? '') : null,
+                'columns' => [],
                 'raw' => $lines[$i],
             ];
+
+            // Preserve raw header -> value mapping for column-to-parameter mapping
+            foreach ($header as $idx => $col) {
+                if (isset($row[$idx])) {
+                    $entry['columns'][$col] = trim($row[$idx]);
+                }
+            }
 
             // Fallback: map positionally if no header match
             if (!$entry['sample_code'] && !$entry['test_code'] && !$entry['result_value']) {

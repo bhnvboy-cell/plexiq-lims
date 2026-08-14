@@ -68,8 +68,14 @@
             <a href="/instruments" class="nav-item <?= $_SERVER['REQUEST_URI'] === '/instruments' ? 'active' : '' ?>">
                 <i class="bi bi-cpu"></i><span>Instruments</span>
             </a>
+            <a href="/analysis-parameters" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/analysis-parameters') ? 'active' : '' ?>">
+                <i class="bi bi-sliders2"></i><span>Analysis Parameters</span>
+            </a>
             <a href="/instruments/results" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/instruments/results') ? 'active' : '' ?>">
                 <i class="bi bi-arrow-down-circle"></i><span>Imported Results</span>
+            </a>
+            <a href="/instruments/imports" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/instruments/imports') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-arrow-down"></i><span>Import Log</span>
             </a>
 
             <div class="nav-section-label">Quality Events</div>

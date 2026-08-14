@@ -27,8 +27,14 @@
 
         <div class="card">
             <div class="card-body">
-                <h6 class="fw-semibold mb-3"><i class="bi bi-upload me-2"></i>Upload File</h6>
-                <form method="POST" action="/instruments/<?= $instrument['id'] ?>/upload" enctype="multipart/form-data">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0"><i class="bi bi-upload me-2"></i>Upload File</h6>
+                    <a href="/instruments/<?= $instrument['id'] ?>/mappings" class="btn btn-sm btn-outline-primary"><i class="bi bi-diagram-3 me-1"></i>Column Mapping</a>
+                </div>
+                <div class="alert alert-info py-2 small">
+                    <i class="bi bi-info-circle me-1"></i>Files are processed in the background. Start the queue worker with <code>php bin/worker.php --queue=imports</code>. Rows matching a column mapping write directly into sample analysis results.
+                </div>
+                <form method="POST" action="/instruments/<?= $instrument['id'] ?>/import-async" enctype="multipart/form-data">
                     <input type="hidden" name="_csrf_token" value="<?= csrf_token() ?>">
                     <div class="mb-3">
                         <label class="form-label">Select File</label>
@@ -44,7 +50,7 @@
                             ?>
                         </div>
                     </div>
-                    <button class="btn btn-primary w-100"><i class="bi bi-cloud-upload me-1"></i>Upload & Parse</button>
+                    <button class="btn btn-primary w-100"><i class="bi bi-cloud-upload me-1"></i>Upload & Queue Import</button>
                 </form>
             </div>
         </div>

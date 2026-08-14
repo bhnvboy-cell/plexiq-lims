@@ -243,6 +243,28 @@ $router->post('/oos/{id}/close', [\App\Controllers\OosController::class, 'close'
 $router->post('/oos/{id}/delete', [\App\Controllers\OosController::class, 'delete'], ['auth']);
 
 // ============================================================
+// ANALYSIS PARAMETERS, RESULT WORKFLOW & INSTRUMENT MAPPING
+// ============================================================
+$router->get('/analysis-parameters', [\App\Controllers\AnalysisParameterController::class, 'index'], ['auth']);
+$router->get('/analysis-parameters/create', [\App\Controllers\AnalysisParameterController::class, 'create'], ['auth']);
+$router->post('/analysis-parameters', [\App\Controllers\AnalysisParameterController::class, 'store'], ['auth']);
+$router->get('/analysis-parameters/{id}/edit', [\App\Controllers\AnalysisParameterController::class, 'edit'], ['auth']);
+$router->post('/analysis-parameters/{id}', [\App\Controllers\AnalysisParameterController::class, 'update'], ['auth']);
+$router->post('/analysis-parameters/{id}/delete', [\App\Controllers\AnalysisParameterController::class, 'delete'], ['auth']);
+$router->get('/samples/{id}/parameters', [\App\Controllers\AnalysisParameterController::class, 'assignPage'], ['auth']);
+$router->post('/samples/{id}/parameters', [\App\Controllers\AnalysisParameterController::class, 'assign'], ['auth']);
+$router->get('/samples/{id}/parameters/entries', [\App\Controllers\AnalysisParameterController::class, 'samplePage'], ['auth']);
+$router->post('/analysis-results/{id}/record', [\App\Controllers\AnalysisParameterController::class, 'recordResult'], ['auth']);
+$router->post('/analysis-results/{id}/review', [\App\Controllers\AnalysisParameterController::class, 'review'], ['auth']);
+$router->post('/analysis-results/{id}/approve', [\App\Controllers\AnalysisParameterController::class, 'approve'], ['auth']);
+$router->get('/instruments/{id}/mappings', [\App\Controllers\AnalysisParameterController::class, 'mappings'], ['auth']);
+$router->post('/instruments/{id}/mappings', [\App\Controllers\AnalysisParameterController::class, 'storeMapping'], ['auth']);
+$router->post('/instruments/mappings/{id}/delete', [\App\Controllers\AnalysisParameterController::class, 'deleteMapping'], ['auth']);
+$router->post('/instruments/{id}/import-async', [\App\Controllers\AnalysisParameterController::class, 'upload'], ['auth']);
+$router->post('/instruments/scan', [\App\Controllers\AnalysisParameterController::class, 'scanWatchPaths'], ['auth']);
+$router->get('/instruments/imports', [\App\Controllers\AnalysisParameterController::class, 'importedResults'], ['auth']);
+
+// ============================================================
 // CAPA (CORRECTIVE & PREVENTIVE ACTION)
 // ============================================================
 $router->get('/capa', [\App\Controllers\CapaController::class, 'index'], ['auth']);
