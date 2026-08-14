@@ -88,7 +88,7 @@ class SupplierController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE suppliers SET supplier_code = ?, supplier_name = ?, contact_person = ?, email = ?, phone = ?, address = ?, city = ?, state = ?, country = ?, postal_code = ?, website = ?, supplier_type = ?, payment_terms = ?, notes = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+        $db->prepare("UPDATE suppliers SET supplier_code = ?, supplier_name = ?, contact_person = ?, email = ?, phone = ?, address = ?, city = ?, state = ?, country = ?, postal_code = ?, website = ?, supplier_type = ?, payment_terms = ?, notes = ?, status = ?, is_approved = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['supplier_code'],
             $_POST['supplier_name'],
             $_POST['contact_person'] ?? null,
@@ -103,6 +103,7 @@ class SupplierController extends BaseController
             $_POST['supplier_type'] ?? 'Raw Material',
             $_POST['payment_terms'] ?? null,
             $_POST['notes'] ?? null,
+            $_POST['approval_status'] ?? 'Pending',
             !empty($_POST['is_active']),
             $id,
         ]);

@@ -203,7 +203,7 @@ class CalibrationEnhancedController extends BaseController
             LIMIT 100
         ");
         $records->execute([$instrumentId]);
-        $standards = $db->query("SELECT id, standard_name FROM calibration_standards WHERE is_active = TRUE ORDER BY standard_name")->fetchAll(\PDO::FETCH_ASSOC);
+        $standards = $db->query("SELECT id, standard_name FROM calibration_standards WHERE status = 'Active' ORDER BY standard_name")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('calibrations-enhanced.records', [
             'instrument' => $instrument,
             'records' => $records->fetchAll(\PDO::FETCH_ASSOC),

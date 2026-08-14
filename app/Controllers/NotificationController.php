@@ -12,21 +12,45 @@ class NotificationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
+        $filterType = $_GET['type'] ?? 'all';
+        $where = "(n.user_id = ? OR n.user_id IS NULL)";
+        $params = [Auth::id()];
+        if ($filterType === 'unread') {
+            $where .= " AND n.is_read = FALSE";
+        } elseif (in_array($filterType, ['alert', 'approval', 'system', 'info'])) {
+            $where .= " AND n.notification_type = ?";
+            $params[] = $filterType;
+        }
         $stmt = $db->prepare("
-            SELECT n.*, u.full_name AS triggered_by_name
+            SELECT n.*, n.notification_type AS type, n.sent_at AS created_at, n.link AS action_url, n.link AS related_entity, u.full_name AS triggered_by_name
             FROM notifications n
             LEFT JOIN users u ON n.triggered_by = u.id
-            WHERE n.user_id = ? OR n.user_id IS NULL
-            ORDER BY n.created_at DESC
+            WHERE {$where}
+            ORDER BY n.sent_at DESC
             LIMIT 50
         ");
-        $stmt->execute([Auth::id()]);
+        $stmt->execute($params);
         $notifications = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        $unread = $db->prepare("SELECT COUNT(*) FROM notifications WHERE (user_id = ? OR user_id IS NULL) AND is_read = FALSE");
-        $unread->execute([Auth::id()]);
+        $counts = [
+            'all' => 0,
+            'unread' => 0,
+            'alert' => 0,
+            'approval' => 0,
+            'system' => 0,
+        ];
+        $countStmt = $db->prepare("SELECT notification_type, is_read FROM notifications WHERE user_id = ? OR user_id IS NULL");
+        $countStmt->execute([Auth::id()]);
+        foreach ($countStmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $counts['all']++;
+            if (!empty($row['is_read'])) continue;
+            $counts['unread']++;
+            if (isset($counts[$row['notification_type']])) { $counts[$row['notification_type']]++; }
+        }
         return $this->render('notifications.index', [
             'notifications' => $notifications,
-            'unreadCount' => (int)$unread->fetchColumn(),
+            'unreadCount' => $counts['unread'],
+            'filterType' => $filterType,
+            'counts' => $counts,
         ]);
     }
 
@@ -43,8 +67,7 @@ class NotificationController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $db->prepare("UPDATE notifications SET is_read = TRUE, read_at = CURRENT_TIMESTAMP WHERE (user_id = ? OR user_id IS NULL) AND is_read = FALSE")->execute([Auth::id()]);
-        session_flash('success', 'All notifications marked as read.');
-        $this->redirect('/notifications');
+        return $this->json(['success' => true]);
     }
 
     public function settings(): string

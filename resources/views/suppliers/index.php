@@ -41,10 +41,10 @@
                     <td><span class="fw-medium"><?= e($s['supplier_code']) ?></span></td>
                     <td><a href="/suppliers/<?= $s['id'] ?>" class="text-decoration-none"><strong><?= e($s['supplier_name']) ?></strong></a></td>
                     <td><span class="badge bg-info bg-opacity-10 text-info"><?= e($s['supplier_type'] ?? '-') ?></span></td>
-                    <td><?= $s['is_active'] ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></td>
+                    <td><?= !empty($s['is_approved']) ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></td>
                     <td><?php if ($s['rating']): ?><span class="badge bg-warning bg-opacity-10 text-warning"><?= e($s['rating']) ?>/5</span><?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
-                    <td><?php $abadge = match ($s['approval_status'] ?? '') { 'Approved'=>'success', 'Pending'=>'warning', 'Rejected'=>'danger', 'Under Review'=>'info', default=>'secondary' }; ?>
-                        <span class="badge bg-<?= $abadge ?>"><?= e($s['approval_status'] ?? 'N/A') ?></span>
+                    <td><?php $abadge = match ($s['status'] ?? '') { 'Approved'=>'success', 'Pending'=>'warning', 'Rejected'=>'danger', 'Under Review'=>'info', default=>'secondary' }; ?>
+                        <span class="badge bg-<?= $abadge ?>"><?= e($s['status'] ?? 'N/A') ?></span>
                     </td>
                     <td class="text-end">
                         <a href="/suppliers/<?= $s['id'] ?>" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-eye"></i></a>

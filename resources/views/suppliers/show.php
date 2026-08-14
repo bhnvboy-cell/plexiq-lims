@@ -24,12 +24,12 @@
                 <div class="detail-label">Type</div>
                 <div class="detail-value mb-3"><span class="badge bg-info bg-opacity-10 text-info"><?= e($supplier['supplier_type'] ?? '-') ?></span></div>
                 <div class="detail-label">Status</div>
-                <div class="detail-value mb-3"><?= $supplier['is_active'] ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></div>
+                <div class="detail-value mb-3"><?= !empty($supplier['is_approved']) ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></div>
                 <div class="detail-label">Rating</div>
                 <div class="detail-value mb-3"><?= $supplier['rating'] ? '<span class="badge bg-warning bg-opacity-10 text-warning">' . e($supplier['rating']) . '/5</span>' : '<span class="text-muted">Not rated</span>' ?></div>
                 <div class="detail-label">Approval Status</div>
-                <div class="detail-value"><?php $abadge = match ($supplier['approval_status'] ?? '') { 'Approved'=>'success', 'Pending'=>'warning', 'Rejected'=>'danger', 'Under Review'=>'info', default=>'secondary' }; ?>
-                    <span class="badge bg-<?= $abadge ?>"><?= e($supplier['approval_status'] ?? 'N/A') ?></span>
+                <div class="detail-value"><?php $abadge = match ($supplier['status'] ?? '') { 'Approved'=>'success', 'Pending'=>'warning', 'Rejected'=>'danger', 'Under Review'=>'info', default=>'secondary' }; ?>
+                    <span class="badge bg-<?= $abadge ?>"><?= e($supplier['status'] ?? 'N/A') ?></span>
                 </div>
             </div>
         </div>
@@ -92,7 +92,7 @@
                         <tr>
                             <td><?= e($p['product_code']) ?></td>
                             <td><?= e($p['product_name']) ?></td>
-                            <td><?= $p['is_active'] ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>' ?></td>
+                            <td><?= !empty($p['is_preferred']) ? '<span class="badge bg-success">Preferred</span>' : '<span class="badge bg-secondary">Standard</span>' ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

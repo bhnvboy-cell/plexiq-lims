@@ -69,8 +69,8 @@
                         <tr>
                             <th>Entity Type</th>
                             <th>Retention Period</th>
-                            <th>Auto-Purge</th>
-                            <th>Records Affected</th>
+                            <th>Action on Expiry</th>
+                            <th>Active</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -81,8 +81,8 @@
                         <tr>
                             <td><span class="badge bg-info bg-opacity-10 text-info"><?= e($rp['entity_type']) ?></span></td>
                             <td><?= $rp['retention_days'] ?> days</td>
-                            <td><?= $rp['auto_purge'] ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' ?></td>
-                            <td><?= $rp['records_affected'] ?? 0 ?></td>
+                            <td><?= e($rp['action_on_expiry'] ?? 'Archive') ?></td>
+                            <td><?= !empty($rp['is_active']) ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' ?></td>
                             <td>
                                 <form method="POST" action="/compliance/retention/<?= $rp['id'] ?>" class="d-inline" onsubmit="return confirm('Delete this policy?')">
                                     <?= csrf_field() ?>
@@ -117,8 +117,11 @@
                         <?php else: foreach ($consentLogs as $cl): ?>
                         <tr>
                             <td><?= e($cl['user_name'] ?? '—') ?></td>
-                            <td><span class="badge bg-<?= $cl['action'] === 'Granted' ? 'success' : ($cl['action'] === 'Revoked' ? 'danger' : 'secondary') ?>"><?= e($cl['action']) ?></span></td>
-                            <td><small><?= e($cl['purpose'] ?? '—') ?></small></td>
+                            <td>
+                                <?php $granted = !empty($cl['consent_granted']); ?>
+                                <span class="badge bg-<?= $granted ? 'success' : 'danger' ?>"><?= $granted ? 'Granted' : 'Revoked' ?></span>
+                            </td>
+                            <td><small><?= e($cl['consent_type'] ?? '—') ?></small></td>
                             <td><small class="text-muted"><?= date('d M Y H:i', strtotime($cl['created_at'])) ?></small></td>
                         </tr>
                         <?php endforeach; endif; ?>
@@ -139,21 +142,19 @@
                             <th>Timestamp</th>
                             <th>User</th>
                             <th>Action</th>
-                            <th>Data Type</th>
-                            <th>Record ID</th>
+                            <th>Description</th>
                             <th>IP Address</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($privacyLogs)): ?>
-                        <tr><td colspan="6" class="text-center text-muted py-4">No privacy access logs recorded.</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted py-4">No privacy access logs recorded.</td></tr>
                         <?php else: foreach ($privacyLogs as $pl): ?>
                         <tr>
                             <td><small class="text-muted"><?= date('d M Y H:i:s', strtotime($pl['created_at'])) ?></small></td>
                             <td><?= e($pl['user_name'] ?? '—') ?></td>
-                            <td><span class="badge bg-<?= match($pl['action']) { 'Access'=>'info', 'Export'=>'warning', 'Delete'=>'danger', 'Rectify'=>'primary', default=>'secondary' } ?>"><?= e($pl['action']) ?></span></td>
-                            <td><?= e($pl['data_type'] ?? '—') ?></td>
-                            <td><?= e($pl['record_id'] ?? '—') ?></td>
+                            <td><span class="badge bg-<?= match($pl['action_type']) { 'Access'=>'info', 'Export'=>'warning', 'Delete'=>'danger', 'Rectify'=>'primary', default=>'secondary' } ?>"><?= e($pl['action_type'] ?? '—') ?></span></td>
+                            <td><?= e($pl['description'] ?? '—') ?></td>
                             <td><small class="text-muted"><?= e($pl['ip_address'] ?? '—') ?></small></td>
                         </tr>
                         <?php endforeach; endif; ?>
@@ -188,12 +189,20 @@
             <label class="form-label">Retention Period (days) <span class="text-danger">*</span></label>
             <input type="number" name="retention_days" class="form-control" required min="1" value="365">
         </div>
+        <div class="mb-3">
+            <label class="form-label">Action on Expiry</label>
+            <select name="action_on_expiry" class="form-select">
+                <option value="Archive">Archive</option>
+                <option value="Purge">Purge</option>
+                <option value="Notify Only">Notify Only</option>
+            </select>
+        </div>
         <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" name="auto_purge" value="1">
-            <label class="form-check-label">Auto-purge after retention period</label>
+            <input class="form-check-input" type="checkbox" name="is_active" value="1" checked>
+            <label class="form-check-label">Policy active</label>
         </div>
         <div class="alert alert-warning py-2 mb-0">
-            <i class="bi bi-exclamation-triangle me-1"></i>Auto-purge permanently deletes records. Ensure compliance with local regulations.
+            <i class="bi bi-exclamation-triangle me-1"></i>Purge permanently deletes records. Ensure compliance with local regulations.
         </div>
     </div>
     <div class="modal-footer">

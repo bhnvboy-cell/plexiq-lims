@@ -3,11 +3,15 @@
     <h4 class="page-title mb-0">
         <i class="bi bi-clock-history me-2"></i>Reading History
         <?php if (!empty($point)): ?>
-        <small class="text-muted fs-6 ms-2"><?= e($point['point_name']) ?> — <?= e($point['location'] ?? '') ?></small>
+        <small class="text-muted fs-6 ms-2"><?= e($point['point_name']) ?> — <?= e($point['location_name'] ?? '') ?></small>
         <?php endif; ?>
     </h4>
     <a href="/environmental" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
 </div>
+
+<?php $success = session_flash('success'); $error = session_flash('error'); ?>
+<?php if ($success): ?><div class="alert alert-success"><?= e($success) ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
 
 <div class="row g-3">
     <!-- Monitoring Point Selector -->
@@ -16,35 +20,48 @@
             <div class="card-header"><h6 class="mb-0"><i class="bi bi-geo-alt me-1"></i>Monitoring Points</h6></div>
             <div class="list-group list-group-flush" style="max-height:400px;overflow-y:auto;">
                 <?php foreach ($points as $p): ?>
-                <a href="?point_id=<?= $p['id'] ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <?= ($selectedPointId ?? '') == $p['id'] ? 'active' : '' ?>">
+                <a href="/environmental/points/<?= $p['id'] ?>/readings" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <?= ($selectedPointId ?? '') == $p['id'] ? 'active' : '' ?>">
                     <div>
                         <div class="fw-bold small"><?= e($p['point_name']) ?></div>
-                        <small class="text-muted"><?= e($p['location'] ?? '') ?></small>
+                        <small class="text-muted"><?= e($p['location_name'] ?? '') ?></small>
                     </div>
-                    <small><?= $p['reading_count'] ?? 0 ?> readings</small>
                 </a>
                 <?php endforeach; ?>
             </div>
         </div>
     </div>
 
-    <!-- Readings Content -->
     <div class="col-md-9">
+        <!-- Add Reading -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-plus-circle me-1"></i>Record Reading</h6></div>
+            <div class="card-body">
+                <form method="POST" action="/environmental/points/<?= $point['id'] ?>/readings" class="row g-2 align-items-end">
+                    <?= csrf_field() ?>
+                    <div class="col-auto">
+                        <label class="form-label small mb-1">Value <span class="text-danger">*</span></label>
+                        <input type="number" name="reading_value" step="any" class="form-control" required>
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small mb-1">Unit</label>
+                        <input type="text" name="unit" class="form-control" value="<?= e($point['unit'] ?? '°C') ?>" style="width:90px">
+                    </div>
+                    <div class="col">
+                        <label class="form-label small mb-1">Notes</label>
+                        <input type="text" name="notes" class="form-control" placeholder="Optional notes">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary"><i class="bi bi-save"></i> Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Chart Area -->
         <div class="card shadow-sm mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-graph-up me-1"></i>Trend Chart</h6>
-                <div class="d-flex gap-2">
-                    <select id="rangeSelector" class="form-select form-select-sm" style="width:auto;" onchange="updateChartRange()">
-                        <option value="24h" <?= ($range ?? '7d') === '24h' ? 'selected' : '' ?>>Last 24 Hours</option>
-                        <option value="7d" <?= ($range ?? '7d') === '7d' ? 'selected' : '' ?>>Last 7 Days</option>
-                        <option value="30d" <?= ($range ?? '') === '30d' ? 'selected' : '' ?>>Last 30 Days</option>
-                        <option value="90d" <?= ($range ?? '') === '90d' ? 'selected' : '' ?>>Last 90 Days</option>
-                    </select>
-                </div>
-            </div>
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-graph-up me-1"></i>Trend Chart</h6></div>
             <div class="card-body">
-                <canvas id="readingsChart" height="250"></canvas>
+                <canvas id="readingsChart" height="200"></canvas>
                 <?php if (empty($readings)): ?>
                 <div class="text-center text-muted py-4">No readings data available for chart.</div>
                 <?php endif; ?>
@@ -62,28 +79,26 @@
                     <thead class="table-light">
                         <tr>
                             <th>Timestamp</th>
-                            <th>Monitoring Point</th>
-                            <th>Parameter</th>
                             <th>Value</th>
                             <th>Unit</th>
-                            <th>Min Threshold</th>
-                            <th>Max Threshold</th>
+                            <th>Recorded By</th>
+                            <th>Notes</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($readings)): ?>
-                        <tr><td colspan="8" class="text-center text-muted py-4">No readings found for the selected criteria.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">No readings recorded for this point.</td></tr>
                         <?php else: foreach ($readings as $r): ?>
-                        <?php $outOfRange = (!empty($r['min_threshold']) && $r['value'] < $r['min_threshold']) || (!empty($r['max_threshold']) && $r['value'] > $r['max_threshold']); ?>
+                        <?php
+                        $outOfRange = ($point['min_threshold'] !== null && (float)$r['reading_value'] < (float)$point['min_threshold']) || ($point['max_threshold'] !== null && (float)$r['reading_value'] > (float)$point['max_threshold']);
+                        ?>
                         <tr class="<?= $outOfRange ? 'table-danger' : '' ?>">
-                            <td><small class="text-muted"><?= date('d M Y H:i:s', strtotime($r['recorded_at'])) ?></small></td>
-                            <td><?= e($r['point_name'] ?? '—') ?></td>
-                            <td><?= e($r['parameter'] ?? '—') ?></td>
-                            <td class="fw-bold <?= $outOfRange ? 'text-danger' : 'text-success' ?>"><?= e($r['value']) ?></td>
+                            <td><small class="text-muted"><?= date('d M Y H:i:s', strtotime($r['created_at'])) ?></small></td>
+                            <td class="fw-bold <?= $outOfRange ? 'text-danger' : 'text-success' ?>"><?= e($r['reading_value']) ?></td>
                             <td><?= e($r['unit'] ?? '—') ?></td>
-                            <td><?= e($r['min_threshold'] ?? '—') ?></td>
-                            <td><?= e($r['max_threshold'] ?? '—') ?></td>
+                            <td><?= e($r['recorded_by_name'] ?? '—') ?></td>
+                            <td><?= e($r['notes'] ?? '—') ?></td>
                             <td>
                                 <?php if ($outOfRange): ?>
                                 <span class="badge bg-danger">Out of Range</span>
@@ -96,18 +111,20 @@
                     </tbody>
                 </table>
             </div>
-            <?php if (!empty($pagination)): ?>
-            <div class="card-footer d-flex justify-content-center">
-                <nav><?= $pagination ?></nav>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-<?php if (!empty($chartLabels) && !empty($chartValues)): ?>
+<?php
+$chartLabels = [];
+$chartValues = [];
+foreach (array_reverse($readings) as $r) {
+    $chartLabels[] = date('d M H:i', strtotime($r['created_at']));
+    $chartValues[] = (float)$r['reading_value'];
+}
+?>
 new Chart(document.getElementById('readingsChart'), {
     type: 'line',
     data: {
@@ -124,22 +141,11 @@ new Chart(document.getElementById('readingsChart'), {
     },
     options: {
         responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: { mode: 'index', intersect: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
             y: { beginAtZero: false },
             x: { ticks: { maxTicksLimit: 10 } }
         }
     }
 });
-<?php endif; ?>
-
-function updateChartRange() {
-    const range = document.getElementById('rangeSelector').value;
-    const params = new URLSearchParams(window.location.search);
-    params.set('range', range);
-    window.location.search = params.toString();
-}
 </script>

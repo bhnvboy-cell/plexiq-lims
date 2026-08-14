@@ -38,15 +38,15 @@
                 <div class="col-md-4">
                     <label class="form-label">Approval Status</label>
                     <select name="approval_status" class="form-select">
-                        <option value="Pending" <?= ($supplier['approval_status'] ?? '') === 'Pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="Under Review" <?= ($supplier['approval_status'] ?? '') === 'Under Review' ? 'selected' : '' ?>>Under Review</option>
-                        <option value="Approved" <?= ($supplier['approval_status'] ?? '') === 'Approved' ? 'selected' : '' ?>>Approved</option>
-                        <option value="Rejected" <?= ($supplier['approval_status'] ?? '') === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                        <option value="Pending" <?= ($supplier['status'] ?? '') === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                        <option value="Under Review" <?= ($supplier['status'] ?? '') === 'Under Review' ? 'selected' : '' ?>>Under Review</option>
+                        <option value="Approved" <?= ($supplier['status'] ?? '') === 'Approved' ? 'selected' : '' ?>>Approved</option>
+                        <option value="Rejected" <?= ($supplier['status'] ?? '') === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                     </select>
                 </div>
                 <div class="col-12">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" <?= ($supplier['is_active'] ?? true) ? 'checked' : '' ?>>
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" <?= !empty($supplier['is_approved']) || empty($supplier) ? 'checked' : '' ?>>
                         <label class="form-check-label" for="is_active">Active</label>
                     </div>
                 </div>

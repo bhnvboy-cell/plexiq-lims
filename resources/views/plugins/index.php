@@ -18,7 +18,7 @@
             <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <h5 class="card-title mb-1"><?= e($p['name']) ?></h5>
+                        <h5 class="card-title mb-1"><?= e($p['plugin_name']) ?></h5>
                         <small class="text-muted">v<?= e($p['version'] ?? '1.0.0') ?></small>
                     </div>
                     <div class="form-check form-switch">
@@ -31,10 +31,13 @@
                         <span class="badge bg-<?= $p['is_active'] ? 'success' : 'secondary' ?>"><?= $p['is_active'] ? 'Active' : 'Inactive' ?></span>
                         <span class="badge bg-info bg-opacity-10 text-info ms-1"><?= e($p['author'] ?? 'Unknown') ?></span>
                     </div>
-                    <form method="POST" action="/plugins/<?= $p['id'] ?>/uninstall" class="d-inline" onsubmit="return confirm('Uninstall <?= e($p['name']) ?>? This will remove all plugin data.')">
-                        <?= csrf_field() ?>
-                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                    </form>
+                    <div class="d-flex gap-2">
+                        <a href="/plugins/<?= $p['id'] ?>/settings" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear"></i> Settings</a>
+                        <form method="POST" action="/plugins/<?= $p['id'] ?>/uninstall" class="d-inline" onsubmit="return confirm('Uninstall <?= e($p['plugin_name']) ?>? This will remove all plugin data.')">
+                            <?= csrf_field() ?>
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

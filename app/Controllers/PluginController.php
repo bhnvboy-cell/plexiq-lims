@@ -51,7 +51,7 @@ class PluginController extends BaseController
         $this->redirect('/plugins');
     }
 
-    public function toggle(int $id): void
+    public function toggle(int $id): string
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
@@ -61,8 +61,9 @@ class PluginController extends BaseController
         if ($plugin) {
             $db->prepare("UPDATE plugins SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$plugin['is_active'], $id]);
             Audit::log('Plugin Toggled', 'plugins', $id);
+            return $this->json(['success' => true]);
         }
-        $this->redirect('/plugins');
+        return $this->json(['success' => false, 'message' => 'Plugin not found.'], 404);
     }
 
     public function settings(int $id): string
@@ -73,7 +74,7 @@ class PluginController extends BaseController
         $stmt->execute([$id]);
         $plugin = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$plugin) { session_flash('error', 'Plugin not found.'); $this->redirect('/plugins'); }
-        $config = json_decode($plugin['config'] ?? '{}', true);
+        $config = json_decode($plugin['settings'] ?? '{}', true);
         return $this->render('plugins.settings', ['plugin' => $plugin, 'config' => $config]);
     }
 }

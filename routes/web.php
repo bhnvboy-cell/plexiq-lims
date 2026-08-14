@@ -391,7 +391,7 @@ $router->post('/dashboard/filters/{id}/delete', [\App\Controllers\DashboardCusto
 // COMPLIANCE (GDPR / HIPAA)
 // ============================================================
 $router->get('/compliance', [\App\Controllers\ComplianceController::class, 'index'], ['auth']);
-$router->post('/compliance/retention', [\App\Controllers\ComplianceController::class, 'dataRetention'], ['auth']);
+$router->post('/compliance/retention', [\App\Controllers\ComplianceController::class, 'storeRetention'], ['auth']);
 $router->get('/compliance/privacy-logs', [\App\Controllers\ComplianceController::class, 'privacyLogs'], ['auth']);
 $router->get('/compliance/consent-logs', [\App\Controllers\ComplianceController::class, 'consentLogs'], ['auth']);
 $router->post('/compliance/export/{userId}', [\App\Controllers\ComplianceController::class, 'exportData'], ['auth']);
@@ -425,6 +425,7 @@ $router->post('/stability/{id}/close', [\App\Controllers\StabilityController::cl
 // ============================================================
 $router->get('/environmental', [\App\Controllers\EnvironmentalController::class, 'index'], ['auth']);
 $router->get('/environmental/points', [\App\Controllers\EnvironmentalController::class, 'points'], ['auth']);
+$router->get('/environmental/points/create', [\App\Controllers\EnvironmentalController::class, 'createPoint'], ['auth']);
 $router->post('/environmental/points', [\App\Controllers\EnvironmentalController::class, 'storePoint'], ['auth']);
 $router->get('/environmental/points/{id}/readings', [\App\Controllers\EnvironmentalController::class, 'readings'], ['auth']);
 $router->post('/environmental/points/{id}/readings', [\App\Controllers\EnvironmentalController::class, 'addReading'], ['auth']);
@@ -454,6 +455,7 @@ $router->get('/suppliers/{id}/edit', [\App\Controllers\SupplierController::class
 $router->post('/suppliers/{id}', [\App\Controllers\SupplierController::class, 'update'], ['auth']);
 $router->get('/suppliers/{id}/qualifications', [\App\Controllers\SupplierController::class, 'qualifications'], ['auth']);
 $router->post('/suppliers/{id}/qualifications', [\App\Controllers\SupplierController::class, 'addQualification'], ['auth']);
+$router->get('/suppliers/{id}/products', [\App\Controllers\SupplierController::class, 'products'], ['auth']);
 $router->post('/suppliers/{id}/products', [\App\Controllers\SupplierController::class, 'linkProduct'], ['auth']);
 
 // ============================================================
@@ -489,10 +491,12 @@ $router->get('/calibrations/overdue', [\App\Controllers\CalibrationEnhancedContr
 // ============================================================
 $router->get('/billing', [\App\Controllers\BillingController::class, 'index'], ['auth']);
 $router->get('/billing/create', [\App\Controllers\BillingController::class, 'create'], ['auth']);
+$router->post('/billing/store', [\App\Controllers\BillingController::class, 'store'], ['auth']);
 $router->post('/billing', [\App\Controllers\BillingController::class, 'store'], ['auth']);
 $router->get('/billing/{id}', [\App\Controllers\BillingController::class, 'show'], ['auth']);
 $router->get('/billing/{id}/edit', [\App\Controllers\BillingController::class, 'edit'], ['auth']);
 $router->post('/billing/{id}', [\App\Controllers\BillingController::class, 'update'], ['auth']);
+$router->post('/billing/{id}/update', [\App\Controllers\BillingController::class, 'update'], ['auth']);
 $router->post('/billing/{id}/items', [\App\Controllers\BillingController::class, 'addItem'], ['auth']);
 $router->post('/billing/{id}/payments', [\App\Controllers\BillingController::class, 'recordPayment'], ['auth']);
 $router->get('/billing/{id}/pdf', [\App\Controllers\BillingController::class, 'downloadPdf'], ['auth']);

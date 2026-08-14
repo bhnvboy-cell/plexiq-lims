@@ -50,7 +50,13 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT * FROM api_webhooks WHERE created_by = ? ORDER BY created_at DESC");
+        $stmt = $db->prepare("
+            SELECT w.*,
+                (SELECT wl.response_code FROM webhook_logs wl WHERE wl.webhook_id = w.id ORDER BY wl.id DESC LIMIT 1) AS last_response_code
+            FROM api_webhooks w
+            WHERE w.created_by = ?
+            ORDER BY w.created_at DESC
+        ");
         $stmt->execute([Auth::id()]);
         $webhooks = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('api.webhooks', ['webhooks' => $webhooks]);
@@ -60,11 +66,19 @@ class ApiIntegrationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
+        $eventsRaw = $_POST['events'] ?? '[]';
+        if (is_array($eventsRaw)) {
+            $eventsJson = json_encode($eventsRaw);
+        } elseif (is_string($eventsRaw) && trim($eventsRaw) !== '' && $eventsRaw !== '[]') {
+            $eventsJson = json_encode(array_values(array_filter(array_map('trim', explode(',', $eventsRaw)))));
+        } else {
+            $eventsJson = '[]';
+        }
         $db->prepare("INSERT INTO api_webhooks (created_by, name, url, events, secret_key, is_active) VALUES (?, ?, ?, ?, ?, ?)")->execute([
             Auth::id(),
             $_POST['name'] ?? 'Webhook',
             $_POST['url'],
-            is_array($_POST['events'] ?? []) ? json_encode($_POST['events']) : ($_POST['events'] ?? '[]'),
+            $eventsJson,
             $_POST['secret'] ?? bin2hex(random_bytes(16)),
             !empty($_POST['is_active']),
         ]);

@@ -12,14 +12,67 @@ class ComplianceController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $stats = [
-            'total_users' => (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-            'data_retention_count' => (int)$db->query("SELECT COUNT(*) FROM data_retention_policies")->fetchColumn(),
-            'consent_records' => (int)$db->query("SELECT COUNT(*) FROM consent_logs")->fetchColumn(),
-            'privacy_logs_count' => (int)$db->query("SELECT COUNT(*) FROM privacy_logs")->fetchColumn(),
-            'export_requests' => (int)$db->query("SELECT COUNT(*) FROM data_export_requests WHERE status = 'Pending'")->fetchColumn(),
+        $retentionPolicies = $db->query("SELECT * FROM data_retention_policies ORDER BY entity_type")->fetchAll(\PDO::FETCH_ASSOC);
+        $consentLogs = $db->query("
+            SELECT cl.*, u.full_name AS user_name
+            FROM consent_logs cl
+            LEFT JOIN users u ON cl.user_id = u.id
+            ORDER BY cl.created_at DESC
+            LIMIT 50
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+        $privacyLogs = $db->query("
+            SELECT pl.*, u.full_name AS user_name
+            FROM privacy_logs pl
+            LEFT JOIN users u ON pl.user_id = u.id
+            ORDER BY pl.created_at DESC
+            LIMIT 50
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+        $totalUsers = (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $retentionTotal = count($retentionPolicies);
+        $retentionActive = 0;
+        $expiringSoon = 0;
+        foreach ($retentionPolicies as $rp) {
+            if (!empty($rp['is_active'])) { $retentionActive++; }
+            if ((int)($rp['retention_days'] ?? 0) <= 90) { $expiringSoon++; }
+        }
+        $consentTotal = count($consentLogs);
+        $lastAuditDate = $db->query("SELECT MAX(created_at) FROM audit_logs")->fetchColumn();
+        $compliance = [
+            'gdpr' => [
+                'status' => $retentionTotal > 0 && $consentTotal > 0 ? 'Compliant' : 'Needs Review',
+                'score' => $retentionTotal > 0 || $consentTotal > 0 ? min(100, ($retentionActive + $consentTotal) * 10) : 0,
+                'details' => ($retentionActive > 0 ? $retentionActive . ' active retention policies' : 'No retention policies') . ' · ' . $consentTotal . ' consent records',
+            ],
+            'hipaa' => [
+                'status' => $totalUsers > 0 && count($privacyLogs) > 0 ? 'Compliant' : 'Needs Review',
+                'score' => $totalUsers > 0 ? min(100, count($privacyLogs) * 5) : 0,
+                'details' => count($privacyLogs) . ' privacy access events logged',
+            ],
         ];
-        return $this->render('compliance.index', ['stats' => $stats]);
+        return $this->render('compliance.index', [
+            'retentionPolicies' => $retentionPolicies,
+            'consentLogs' => $consentLogs,
+            'privacyLogs' => $privacyLogs,
+            'dataRetentionStats' => ['total' => $retentionTotal, 'compliant' => $retentionActive, 'expiring_soon' => $expiringSoon],
+            'consentStats' => ['total' => $consentTotal, 'pending' => 0],
+            'lastAuditDate' => $lastAuditDate,
+            'compliance' => $compliance,
+        ]);
+    }
+
+    public function storeRetention(): void
+    {
+        Auth::requireRole('Admin');
+        $db = \App\Helpers\Database::connect();
+        $db->prepare("INSERT INTO data_retention_policies (entity_type, retention_days, action_on_expiry, is_active) VALUES (?, ?, ?, ?)")->execute([
+            $_POST['entity_type'],
+            $_POST['retention_days'],
+            $_POST['action_on_expiry'] ?? 'Archive',
+            !empty($_POST['is_active']),
+        ]);
+        Audit::log('Data Retention Policy Created', 'data_retention_policies', $db->lastInsertId());
+        session_flash('success', 'Retention policy added.');
+        $this->redirect('/compliance');
     }
 
     public function dataRetention(): string

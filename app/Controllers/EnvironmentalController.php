@@ -15,15 +15,16 @@ class EnvironmentalController extends BaseController
         $points = $db->query("
             SELECT ep.*,
                 (SELECT COUNT(*) FROM environmental_readings er WHERE er.point_id = ep.id) AS reading_count,
-                (SELECT reading_value FROM environmental_readings er WHERE er.point_id = ep.id ORDER BY er.created_at DESC LIMIT 1) AS last_reading,
+                (SELECT reading_value FROM environmental_readings er WHERE er.point_id = ep.id ORDER BY er.created_at DESC LIMIT 1) AS last_reading_value,
                 (SELECT created_at FROM environmental_readings er WHERE er.point_id = ep.id ORDER BY er.created_at DESC LIMIT 1) AS last_reading_time
             FROM environmental_points ep
             ORDER BY ep.location_name
         ")->fetchAll(\PDO::FETCH_ASSOC);
         $alerts = $db->query("
-            SELECT ea.*, ep.point_name, ep.location_name
+            SELECT ea.*, ep.point_name, ep.location_name, ep.monitoring_type, u.full_name AS resolved_by_name
             FROM environmental_alerts ea
             JOIN environmental_points ep ON ea.point_id = ep.id
+            LEFT JOIN users u ON ea.resolved_by = u.id
             WHERE ea.is_resolved = FALSE
             ORDER BY ea.created_at DESC
             LIMIT 20
@@ -82,7 +83,8 @@ class EnvironmentalController extends BaseController
         ");
         $readingStmt->execute([$pointId]);
         $readings = $readingStmt->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('environmental.readings', ['point' => $point, 'readings' => $readings]);
+        $points = $db->query("SELECT id, point_name, location_name FROM environmental_points ORDER BY location_name")->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->render('environmental.readings', ['point' => $point, 'points' => $points, 'readings' => $readings, 'selectedPointId' => $pointId]);
     }
 
     public function addReading(int $pointId): void
