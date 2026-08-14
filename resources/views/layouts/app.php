@@ -162,6 +162,9 @@
                 <a href="/deployment" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/deployment') ? 'active' : '' ?>">
                     <i class="bi bi-cloud"></i><span>Cloud Settings</span>
                 </a>
+                <a href="/backups" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/backups') ? 'active' : '' ?>">
+                    <i class="bi bi-database-gear"></i><span>Backup & Restore</span>
+                </a>
             </div>
             <?php endif; ?>
         </nav>

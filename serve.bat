@@ -12,5 +12,5 @@ echo Login: admin / admin@123
 echo.
 echo Press Ctrl+C to stop the server.
 echo.
-php -S localhost:8080 -t public
+php -S 0.0.0.0:8080 -t public public/router.php
 pause

@@ -509,6 +509,17 @@ $router->post('/deployment', [\App\Controllers\DeploymentController::class, 'upd
 $router->get('/deployment/toggle-mode', [\App\Controllers\DeploymentController::class, 'toggleMode'], ['auth']);
 
 // ============================================================
+// BACKUP & RESTORE
+// ============================================================
+$router->get('/backups', [\App\Controllers\BackupController::class, 'index'], ['auth']);
+$router->post('/backups', [\App\Controllers\BackupController::class, 'create'], ['auth']);
+$router->get('/backups/download/{file}', [\App\Controllers\BackupController::class, 'download'], ['auth']);
+$router->get('/backups/restore/{file}', [\App\Controllers\BackupController::class, 'confirmRestore'], ['auth']);
+$router->post('/backups/restore/{file}', [\App\Controllers\BackupController::class, 'restore'], ['auth']);
+$router->post('/backups/delete/{file}', [\App\Controllers\BackupController::class, 'delete'], ['auth']);
+$router->post('/backups/settings', [\App\Controllers\BackupController::class, 'updateSettings'], ['auth']);
+
+// ============================================================
 // MISSING ROUTES FOR BROKEN LINKS IN VIEWS
 // ============================================================
 $router->post('/environmental/alerts/{id}/acknowledge', [\App\Controllers\EnvironmentalController::class, 'acknowledgeAlert'], ['auth']);

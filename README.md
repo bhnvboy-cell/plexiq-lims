@@ -142,12 +142,12 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
-   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver) — apply all migrations, or the affected pages will fail.
+   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver). `013_backup.sql` adds the `backup_settings`/`backup_runs` tables used by the Backup & Restore module — apply all migrations, or the affected pages will fail.
 5. Start the dev server (or double-click `serve.bat`):
    ```bash
-   C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public
+   C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public public/router.php
    ```
-   Use `0.0.0.0` instead of `localhost` to access the app from phones/tablets on the same network.
+   The `public/router.php` router script is required in development so that download/restore URLs containing a `.sql` suffix route through the front controller (the built-in server treats extension URLs as static files otherwise). Use `0.0.0.0` instead of `localhost` to access the app from phones/tablets on the same network.
 6. Open **http://localhost:8080** and log in.
 
 ### Default Login
@@ -188,6 +188,44 @@ Generate an application key:
 ```bash
 php bin/console key:generate
 ```
+
+### Backup & Restore
+
+Backups are plain SQL dumps (`pg_dump -Fp --clean --if-exists --no-owner`) stored in `storage/backups/`, each with a `.meta.json` sidecar (sha256 checksum, size, type, app version) used to detect tampering.
+
+**Web UI** — Administrators: **Administration → Backup & Restore** (`/backups`). Create, download, restore (type `RESTORE` to confirm — this **overwrites the database**), delete, and set retention / binary paths.
+
+**CLI:**
+
+```bash
+# Create a manual backup
+php bin/console backup:run --type=manual
+
+# List backups
+php bin/console backup:list
+
+# Restore (destructive!)
+php bin/console backup:restore <file.sql>
+
+# Prune old backups (apply retention)
+php bin/console backup:prune
+```
+
+**Scheduled backups** — add a cron job (Linux) or Scheduled Task (Windows):
+
+```bash
+0 2 * * * cd /path/to/plexiq && /usr/bin/php bin/console backup:run --type=scheduled
+```
+
+**Configuration** (`.env` or the Backup Settings UI):
+
+| Variable | Description |
+|----------|-------------|
+| `BACKUP_RETENTION` | Number of backups to keep (default `10`, min `1`) |
+| `PG_DUMP_PATH` | Path to `pg_dump.exe` (auto-detected if empty) |
+| `PSQL_PATH` | Path to `psql.exe` (auto-detected if empty) |
+
+Restore replays the dump with `psql -v ON_ERROR_STOP=1`, so any SQL error aborts the restore. Every operation is written to the audit trail.
 
 ## Troubleshooting
 

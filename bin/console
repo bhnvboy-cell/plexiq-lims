@@ -75,6 +75,55 @@ switch ($command) {
         echo "  Failed:  {$failed}\n";
         break;
 
+    case 'backup:run':
+        // php bin/console backup:run [--type=manual]
+        $type = 'manual';
+        foreach (array_slice($argv, 2) as $arg) {
+            if (str_starts_with($arg, '--type=')) {
+                $type = substr($arg, 7);
+            }
+        }
+        try {
+            $meta = (new \App\Services\BackupService())->create($type);
+            echo 'Backup created: ' . $meta['file'] . ' (' . round($meta['size'] / 1024, 1) . " KB)\n";
+        } catch (\Throwable $e) {
+            fwrite(STDERR, 'Backup failed: ' . $e->getMessage() . "\n");
+            exit(1);
+        }
+        break;
+
+    case 'backup:list':
+        $backups = (new \App\Services\BackupService())->list();
+        if (empty($backups)) {
+            echo "No backups found.\n";
+            break;
+        }
+        printf("%-40s %-8s %-19s %s\n", 'FILE', 'TYPE', 'CREATED', 'SIZE');
+        foreach ($backups as $b) {
+            printf("%-40s %-8s %-19s %.1f KB\n", $b['file'], $b['type'], date('Y-m-d H:i:s', strtotime($b['created_at'])), $b['size'] / 1024);
+        }
+        break;
+
+    case 'backup:restore':
+        // php bin/console backup:restore <file.sql>
+        if (empty($argv[2])) {
+            fwrite(STDERR, "Usage: php bin/console backup:restore <backup.sql>\n");
+            exit(1);
+        }
+        try {
+            $result = (new \App\Services\BackupService())->restore($argv[2]);
+            echo 'Backup restored: ' . $result['file'] . ' (took ' . round($result['duration_ms'] / 1000, 1) . "s)\n";
+        } catch (\Throwable $e) {
+            fwrite(STDERR, 'Restore failed: ' . $e->getMessage() . "\n");
+            exit(1);
+        }
+        break;
+
+    case 'backup:prune':
+        $removed = (new \App\Services\BackupService())->prune();
+        echo "Pruned {$removed} old backup(s).\n";
+        break;
+
     case 'help':
     default:
         echo "Advanced LIMS Console\n";
@@ -85,5 +134,9 @@ switch ($command) {
         echo "  cache:clear    Flush the application cache\n";
         echo "  queue:work     Start the async job worker (see bin/worker.php --help)\n";
         echo "  queue:monitor  Show pending/failed job counts\n";
+        echo "  backup:run     Create a database backup (--type=manual|scheduled)\n";
+        echo "  backup:list    List stored backups\n";
+        echo "  backup:restore Restore a backup (destructive)\n";
+        echo "  backup:prune   Delete old backups beyond retention\n";
         break;
 }

@@ -62,9 +62,13 @@ require __DIR__ . '/../routes/api.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 
-// Strip subdirectory prefix for apps installed under a subfolder (e.g. /plexiq)
-$scriptDir = dirname($_SERVER['SCRIPT_NAME']);
-if ($scriptDir !== '/' && $scriptDir !== '\\') {
+// Strip subdirectory prefix for apps installed under a subfolder (e.g. /plexiq).
+// Only strip when this request was routed through the front controller; for the
+// built-in dev server, static-looking URLs (e.g. /backups/download/x.sql) report
+// SCRIPT_NAME as the requested URI itself, which must not be treated as a prefix.
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+$scriptDir = dirname($scriptName);
+if ($scriptDir !== '/' && $scriptDir !== '\\' && basename($scriptName) === 'index.php') {
     $uri = '/' . ltrim(substr($uri, strlen($scriptDir)), '/');
     $uri = $uri ?: '/';
 }

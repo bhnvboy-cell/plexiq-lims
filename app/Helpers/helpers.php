@@ -48,6 +48,14 @@ if (!function_exists('env')) {
     }
 }
 
+if (!function_exists('base_path')) {
+    function base_path(string $path = ''): string
+    {
+        $base = __DIR__ . '/../..';
+        return $path ? $base . '/' . ltrim($path, '/') : $base;
+    }
+}
+
 if (!function_exists('storage_path')) {
     function storage_path(string $path = ''): string
     {

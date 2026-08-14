@@ -13,6 +13,8 @@ storage/logs/*
 !storage/logs/.gitkeep
 storage/cache/*
 !storage/cache/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
 storage/sessions/*
 !storage/sessions/.gitkeep
 storage/installer/*
