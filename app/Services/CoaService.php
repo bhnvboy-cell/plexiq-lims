@@ -308,6 +308,9 @@ class CoaService
             if ($r['is_within_spec'] === null) $status = 'N/A';
 
             $resultValue = $r['result_value'] !== null ? $r['result_value'] : ($r['result_text'] ?? 'N/A');
+            if ($r['result_value'] !== null && $r['uncertainty'] !== null) {
+                $resultValue .= ' ± ' . $r['uncertainty'] . (($r['k_factor'] !== null) ? ' (k=' . $r['k_factor'] . ')' : '');
+            }
             $bgColor = ($rowNum % 2 === 0) ? '#f9f9f9' : '#ffffff';
             if ($status === 'Fail') $bgColor = '#ffe0e0';
             if ($status === 'N/A') $bgColor = '#fffde0';
@@ -391,7 +394,7 @@ class CoaService
         $stmt = $db->prepare("
             SELECT t.test_name, t.test_code, t.spec_limit_text, t.min_spec_limit, t.max_spec_limit,
                    m.method_name, u.unit_code, u.unit_name,
-                   r.result_value, r.result_text, r.is_within_spec,
+                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor, r.confidence_interval,
                    ent.full_name AS entered_by_name
             FROM sample_tests st
             JOIN tests t ON st.test_id = t.id

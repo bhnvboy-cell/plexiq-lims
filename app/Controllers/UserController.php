@@ -13,8 +13,15 @@ class UserController extends BaseController
     public function index(): string
     {
         Auth::requireRole('Admin');
-        $users = User::allWithRole();
-        return $this->render('auth.users', ['users' => $users]);
+        $db = \App\Helpers\Database::connect();
+        $result = \App\Helpers\Pagination::run($db, "
+            SELECT u.*, r.name as role_name
+            FROM users u JOIN roles r ON u.role_id = r.id
+        ", "
+            SELECT COUNT(*)
+            FROM users u JOIN roles r ON u.role_id = r.id
+        ", [], 20, 'u.created_at DESC');
+        return $this->render('auth.users', ['users' => $result['items'], 'paginator' => $result]);
     }
 
     public function create(): string
@@ -88,13 +95,15 @@ class UserController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT lh.*, u.username, u.full_name
             FROM login_history lh
             JOIN users u ON lh.user_id = u.id
-            ORDER BY lh.login_at DESC
-            LIMIT 200
-        ");
-        return $this->render('audit.login-history', ['history' => $stmt->fetchAll()]);
+        ", "
+            SELECT COUNT(*)
+            FROM login_history lh
+            JOIN users u ON lh.user_id = u.id
+        ", [], 50, 'lh.login_at DESC');
+        return $this->render('audit.login-history', ['history' => $result['items'], 'paginator' => $result]);
     }
 }

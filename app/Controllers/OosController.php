@@ -19,6 +19,7 @@ class OosController extends BaseController
             FROM oos_records o
             LEFT JOIN users u1 ON o.initiated_by = u1.id
             LEFT JOIN users u2 ON o.assigned_to = u2.id
+            WHERE o.deleted_at IS NULL
             ORDER BY o.created_at DESC
         ")->fetchAll();
         return $this->render('oos.index', ['records' => $records]);
@@ -149,7 +150,7 @@ class OosController extends BaseController
     public function delete(int $id): void
     {
         Auth::requireRole('Admin');
-        OosRecord::delete($id);
+        OosRecord::softDelete($id);
         Audit::log('OOS Record Deleted', 'oos_records', $id);
         session_flash('success', 'OOS record deleted.');
         redirect('/oos');

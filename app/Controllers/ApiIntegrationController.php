@@ -18,29 +18,47 @@ class ApiIntegrationController extends BaseController
         return $this->render('api.tokens', ['tokens' => $tokens]);
     }
 
-    public function createToken(): void
+    public function createToken(): string
     {
         Auth::requireAuth();
         $token = bin2hex(random_bytes(32));
-        $masked = substr($token, 0, 8) . '...' . substr($token, -8);
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO api_tokens (user_id, token, masked_token, name, expires_at) VALUES (?, ?, ?, ?, ?)")->execute([
+
+        $scope = $_POST['scope'] ?? 'read';
+        $permissions = match ($scope) {
+            'full' => ['*'],
+            'write' => ['samples.read', 'samples.write', 'customers.read', 'products.read', 'results.read', 'results.write', 'notifications.read'],
+            default => ['samples.read', 'customers.read', 'products.read', 'results.read', 'notifications.read'],
+        };
+
+        $expiresIn = (int)($_POST['expires_in'] ?? 90);
+        $expiresAt = $expiresIn > 0 ? date('Y-m-d H:i:s', strtotime("+{$expiresIn} days")) : null;
+
+        $db->prepare("INSERT INTO api_tokens (user_id, token_hash, token_name, permissions, expires_at, is_active) VALUES (?, ?, ?, ?::jsonb, ?, TRUE)")->execute([
             Auth::id(),
-            password_hash($token, PASSWORD_DEFAULT),
-            $masked,
+            hash('sha256', $token),
             $_POST['name'] ?? 'API Token',
-            $_POST['expires_at'] ?: null,
+            json_encode($permissions),
+            $expiresAt,
         ]);
-        Audit::log('API Token Created', 'api_tokens', null, null, ['name' => $_POST['name'] ?? 'API Token']);
-        session_flash('success', 'Token created: ' . $token);
-        $this->redirect('/api-management/tokens');
+        Audit::log('API Token Created', 'api_tokens', null, null, ['name' => $_POST['name'] ?? 'API Token', 'scope' => $scope]);
+        session_flash('success', 'Token created.');
+        $this->render('api.tokens', ['tokens' => $this->fetchTokens(), 'newToken' => $token]);
+    }
+
+    private function fetchTokens(): array
+    {
+        $db = \App\Helpers\Database::connect();
+        $stmt = $db->prepare("SELECT * FROM api_tokens WHERE user_id = ? ORDER BY created_at DESC");
+        $stmt->execute([Auth::id()]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function revokeToken(int $id): void
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE api_tokens SET is_revoked = TRUE, revoked_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?")->execute([$id, Auth::id()]);
+        $db->prepare("UPDATE api_tokens SET is_active = FALSE WHERE id = ? AND user_id = ?")->execute([$id, Auth::id()]);
         Audit::log('API Token Revoked', 'api_tokens', $id);
         session_flash('success', 'Token revoked.');
         $this->redirect('/api-management/tokens');

@@ -57,6 +57,45 @@
     </div>
 </div>
 
+<?php if (!empty($violations)): ?>
+<div class="card mb-4 border-danger">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle me-1"></i>Out-of-Control Alerts (Nelson Rules)
+        <span class="badge bg-light text-danger ms-2"><?= count($violations) ?> violation(s)</span>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Rule</th>
+                    <th>Description</th>
+                    <th>Point</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($violations as $v): ?>
+                <tr>
+                    <td><span class="badge bg-danger"><?= $v['rule'] ?></span></td>
+                    <td><?= e($v['rule_text']) ?></td>
+                    <td>#<?= $v['index'] + 1 ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <small class="text-muted mt-2 d-block">Refer to a CAPA or investigation when an out-of-control condition is confirmed.</small>
+    </div>
+</div>
+<?php elseif (count($readings) >= 8): ?>
+<div class="card mb-4 border-success">
+    <div class="card-header bg-success text-white">
+        <i class="bi bi-check-circle me-1"></i>Process In Control
+    </div>
+    <div class="card-body">
+        <p class="mb-0">No Nelson rule violations detected across <?= count($readings) ?> readings.</p>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if ($cpk): ?>
 <div class="card mb-4">
     <div class="card-header"><i class="bi bi-table me-1"></i>Statistical Summary</div>
@@ -156,6 +195,8 @@
 <script>
 const readings = <?= json_encode(array_reverse($readings)) ?>;
 const param = <?= json_encode($param) ?>;
+const violations = <?= json_encode($violations) ?>;
+const violationIdx = new Set(violations.map(v => v.index));
 let spcChart = null;
 
 const labels = readings.map(r => new Date(r.reading_date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit'}));
@@ -341,7 +382,9 @@ function buildChart(type) {
                 const outOfSpec = (hasSpecMin && v < param.spec_min) || (hasSpecMax && v > param.spec_max);
                 return outOfSpec ? '#e74c3c' : '#2b7be4';
               })
-            : undefined,
+            : values.map((_, i) => violationIdx.has(i) ? '#e74c3c' : '#2b7be4'),
+        pointBorderColor: values.map((_, i) => violationIdx.has(i) ? '#c0392b' : '#2b7be4'),
+        pointRadius: values.map((_, i) => violationIdx.has(i) ? 7 : 4),
         showLine: type !== 'scatter',
     });
 

@@ -134,6 +134,7 @@ class SampleController extends BaseController
         $analysts = User::analysts();
         $reviewers = User::reviewers();
         $approvers = User::approvers();
+        $custody = \App\Models\ChainOfCustody::findBySample($id);
 
         return $this->render('samples.show', [
             'sample' => $sample,
@@ -141,6 +142,7 @@ class SampleController extends BaseController
             'analysts' => $analysts,
             'reviewers' => $reviewers,
             'approvers' => $approvers,
+            'custody' => $custody,
         ]);
     }
 
@@ -283,8 +285,8 @@ class SampleController extends BaseController
 
         $db->beginTransaction();
         try {
-            // Remove existing untested assignments
-            $db->prepare("DELETE FROM sample_tests WHERE sample_id = ? AND status = 'Pending'")->execute([$id]);
+            // Remove existing untested assignments (soft delete to preserve audit trail)
+            $db->prepare("UPDATE sample_tests SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE sample_id = ? AND status = 'Pending' AND deleted_at IS NULL")->execute([$id]);
 
             if (!empty($_POST['test_ids']) && is_array($_POST['test_ids'])) {
                 $insertStmt = $db->prepare("INSERT INTO sample_tests (sample_id, test_id, assigned_to) VALUES (?, ?, ?)");

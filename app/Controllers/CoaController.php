@@ -17,7 +17,7 @@ class CoaController extends BaseController
         Auth::requireAnyRole(['Admin', 'Analyst', 'Reviewer', 'Approver', 'Customer']);
         $db = \App\Helpers\Database::connect();
 
-        $where = '';
+        $where = 'WHERE cd.deleted_at IS NULL';
         $params = [];
 
         // Customers only see their own COAs
@@ -28,7 +28,7 @@ class CoaController extends BaseController
                 $stmt->execute([$user['email']]);
                 $cust = $stmt->fetch();
                 if ($cust) {
-                    $where = 'WHERE s.customer_id = ?';
+                    $where .= ' AND s.customer_id = ?';
                     $params[] = $cust['id'];
                 }
             }
@@ -73,10 +73,10 @@ class CoaController extends BaseController
         try {
             $docNumber = CoaDocument::generateNumber();
 
-            // Insert COA document
+            // Insert COA document (fall back to any template if none marked default)
             $stmt = $db->prepare("
                 INSERT INTO coa_documents (sample_id, template_id, document_number, generated_by, status)
-                VALUES (?, (SELECT id FROM coa_templates WHERE is_default = TRUE LIMIT 1), ?, ?, 'Draft')
+                VALUES (?, (SELECT id FROM coa_templates WHERE is_default = TRUE OR is_active = TRUE ORDER BY is_default DESC LIMIT 1), ?, ?, 'Draft')
                 RETURNING id
             ");
             $stmt->execute([$sampleId, $docNumber, Auth::id()]);
@@ -121,7 +121,7 @@ class CoaController extends BaseController
             LEFT JOIN users ru ON s.reviewed_by = ru.id
             LEFT JOIN users au ON s.approved_by = au.id
             LEFT JOIN users cou ON s.coa_released_by = cou.id
-            WHERE cd.id = ?
+            WHERE cd.id = ? AND cd.deleted_at IS NULL
         ");
         $stmt->execute([$id]);
         $document = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -135,7 +135,7 @@ class CoaController extends BaseController
         $testStmt = $db->prepare("
             SELECT t.test_name, t.test_code, t.spec_limit_text, t.min_spec_limit, t.max_spec_limit,
                    m.method_name, u.unit_code, u.unit_name,
-                   r.result_value, r.result_text, r.is_within_spec,
+                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor,
                    ent.full_name AS entered_by_name
             FROM sample_tests st
             JOIN tests t ON st.test_id = t.id
@@ -145,7 +145,7 @@ class CoaController extends BaseController
                 SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
             )
             LEFT JOIN users ent ON r.entered_by = ent.id
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved')
+            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
             ORDER BY t.test_code
         ");
         $testStmt->execute([$document['sample_id']]);

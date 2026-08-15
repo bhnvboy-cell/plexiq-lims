@@ -275,10 +275,9 @@ class AnalysisParameterService
     {
         try {
             $db = Database::connect();
-            $stmt = $db->prepare("SELECT full_name FROM samples WHERE id = ?");
+            $stmt = $db->prepare("SELECT sample_code FROM samples WHERE id = ?");
             $stmt->execute([$sampleId]);
-            $sample = $stmt->fetch(\PDO::FETCH_ASSOC);
-            $label = $sample['full_name'] ?? ('sample #' . $sampleId);
+            $label = $stmt->fetchColumn() ?: ('sample #' . $sampleId);
             \notify_role('Reviewer', 'oos_created', 'OOS Detected: ' . $parameter,
                 'Out-of-specification result recorded for ' . $label . ' (' . $parameter . ').', '/oos');
             \notify_role('Approver', 'oos_created', 'OOS Detected: ' . $parameter,

@@ -17,12 +17,12 @@ class Translation extends BaseModel
     {
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
-            SELECT value FROM " . static::$table . "
-            WHERE `key` = ? AND language_id = ?
+            SELECT translation_value FROM " . static::$table . "
+            WHERE translation_key = ? AND language_id = ?
             LIMIT 1
         ");
         $stmt->execute([$key, $languageId]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $result ? $result['value'] : null;
+        return $result ? $result['translation_value'] : null;
     }
 }

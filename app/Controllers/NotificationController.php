@@ -118,9 +118,15 @@ class NotificationController extends BaseController
         Auth::requireAuth();
         $user = Auth::user();
         if ($user && !empty($user['email'])) {
-            // Log test notification; actual email would use a mailer service
-            Audit::log('Test Notification Sent', 'notifications', null, null, ['user_id' => Auth::id(), 'email' => $user['email'] ?? '']);
+            $mailer = new \App\Services\Mailer();
+            $sent = $mailer->send($user['email'], 'PlexiQ LIMS - Test Notification', '<h3>Test Notification</h3><p>If you are reading this, email notifications are working correctly.</p><p>Sent at: ' . date('Y-m-d H:i:s') . '</p>');
+            if (!$sent) {
+                Audit::log('Test Email Failed', 'notifications', null, null, ['user_id' => Auth::id(), 'error' => $mailer->lastError()]);
+                return $this->json(['success' => false, 'message' => 'Test email failed: ' . $mailer->lastError()]);
+            }
+            Audit::log('Test Email Sent', 'notifications', null, null, ['user_id' => Auth::id(), 'email' => $user['email']]);
+            return $this->json(['success' => true, 'message' => 'Test email sent to ' . $user['email']]);
         }
-        return $this->json(['success' => true, 'message' => 'Test notification logged.']);
+        return $this->json(['success' => false, 'message' => 'Your profile has no email address configured.']);
     }
 }

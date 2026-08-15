@@ -398,17 +398,28 @@ class SapSyncService
             CURLOPT_URL => rtrim($this->odataUrl, '/'),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_HEADER => true,
             CURLOPT_HTTPHEADER => [
                 'x-csrf-token: Fetch',
                 'Authorization: Basic ' . base64_encode($this->username . ':' . $this->password),
             ],
         ]);
         $response = curl_exec($ch);
-        $token = curl_getinfo($ch, CURLINFO_HEADER_OUT) ?: '';
+        $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         curl_close($ch);
 
-        // Extract CSRF token from response headers
-        return $token;
+        if ($response === false || $headerSize <= 0) {
+            return '';
+        }
+
+        $headers = substr((string)$response, 0, $headerSize);
+        foreach (preg_split('/\r?\n/', $headers) as $line) {
+            $parts = explode(':', $line, 2);
+            if (count($parts) === 2 && strtolower(trim($parts[0])) === 'x-csrf-token') {
+                return trim($parts[1]);
+            }
+        }
+        return '';
     }
 
     // ============================================================

@@ -23,17 +23,21 @@
             <tbody>
                 <?php if (empty($tokens)): ?>
                 <tr><td colspan="8" class="text-center text-muted py-4">No API tokens configured. <a href="#" data-bs-toggle="modal" data-bs-target="#createTokenModal">Create one</a>.</td></tr>
-                <?php else: foreach ($tokens as $t): ?>
+                <?php else: foreach ($tokens as $t):
+                    $perms = $t['permissions'] ?? '[]';
+                    if (is_string($perms)) { $perms = json_decode($perms, true) ?: []; }
+                    $permLabel = in_array('*', $perms) ? 'full' : (count($perms) > 0 ? implode(',', array_slice($perms, 0, 3)) : 'read');
+                ?>
                 <tr>
-                    <td class="fw-bold"><?= e($t['name']) ?></td>
-                    <td><code><?= e($t['token_hash'] ?? substr($t['token'], 0, 20) . '...') ?></code></td>
-                    <td><span class="badge bg-<?= $t['scope'] === 'full' ? 'danger' : 'info' ?> bg-opacity-10 text-dark"><?= e($t['scope'] ?? 'read') ?></span></td>
-                    <td><small class="text-muted"><?= $t['last_used_at'] ? date('d M Y H:i', strtotime($t['last_used_at'])) : 'Never' ?></small></td>
+                    <td class="fw-bold"><?= e($t['token_name'] ?? $t['name'] ?? 'API Token') ?></td>
+                    <td><code><?= e(mb_substr($t['token_hash'], 0, 16)) ?>...</code></td>
+                    <td><span class="badge bg-<?= $permLabel === 'full' ? 'danger' : 'info' ?> bg-opacity-10 text-dark"><?= e($permLabel) ?></span></td>
+                    <td><small class="text-muted"><?= !empty($t['last_used_at']) ? date('d M Y H:i', strtotime($t['last_used_at'])) : 'Never' ?></small></td>
                     <td><small class="text-muted"><?= date('d M Y', strtotime($t['created_at'])) ?></small></td>
-                    <td><small class="text-muted"><?= $t['expires_at'] ? date('d M Y', strtotime($t['expires_at'])) : 'Never' ?></small></td>
-                    <td><?php if ($t['revoked_at']): ?><span class="badge bg-danger">Revoked</span><?php else: ?><span class="badge bg-success">Active</span><?php endif; ?></td>
+                    <td><small class="text-muted"><?= !empty($t['expires_at']) ? date('d M Y', strtotime($t['expires_at'])) : 'Never' ?></small></td>
+                    <td><?php if (empty($t['is_active'])): ?><span class="badge bg-danger">Revoked</span><?php else: ?><span class="badge bg-success">Active</span><?php endif; ?></td>
                     <td>
-                        <?php if (empty($t['revoked_at'])): ?>
+                        <?php if (!empty($t['is_active'])): ?>
                         <form method="POST" action="/api-management/tokens/<?= $t['id'] ?>/revoke" class="d-inline" onsubmit="return confirm('Revoke this token? Any integrations using it will stop working.')">
                             <?= csrf_field() ?>
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle"></i></button>

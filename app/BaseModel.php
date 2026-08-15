@@ -62,6 +62,21 @@ abstract class BaseModel
         return $stmt->execute([$id]);
     }
 
+    /**
+     * Soft delete (sets deleted_at) when the table has the column.
+     * Returns false if the column does not exist.
+     */
+    public static function softDelete(int $id): bool
+    {
+        $db = \App\Helpers\Database::connect();
+        $col = $db->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = '" . static::$table . "' AND column_name = 'deleted_at'")->fetchColumn();
+        if ((int)$col === 0) {
+            return false;
+        }
+        $stmt = $db->prepare("UPDATE " . static::$table . " SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE " . static::$primaryKey . " = ? AND deleted_at IS NULL");
+        return $stmt->execute([$id]);
+    }
+
     public static function count(): int
     {
         $db = \App\Helpers\Database::connect();

@@ -70,6 +70,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php require __DIR__ . '/../partials/pagination.php'; ?>
         </div>
     </div>
     <div class="col-lg-5">

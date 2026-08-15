@@ -31,11 +31,14 @@ class SpcController extends BaseController
         $readings = SpcReading::findByParameter($id);
         $stats = SpcReading::parameterStats($id);
         $cpk = SpcReading::calculateCp($id);
+        $valuesChronological = array_reverse(array_column($readings, 'value'));
+        $violations = SpcReading::nelsonRules($valuesChronological);
         return $this->render('spc.detail', [
             'param' => $param,
             'readings' => $readings,
             'stats' => $stats,
             'cpk' => $cpk,
+            'violations' => $violations,
         ]);
     }
 

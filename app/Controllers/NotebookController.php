@@ -16,8 +16,9 @@ class NotebookController extends BaseController
             SELECT n.*, u.full_name AS created_by_name
             FROM eln_entries n
             LEFT JOIN users u ON n.created_by = u.id
+            WHERE n.deleted_at IS NULL
         ", "
-            SELECT COUNT(*) FROM eln_entries n
+            SELECT COUNT(*) FROM eln_entries n WHERE n.deleted_at IS NULL
         ", [], 20, 'n.created_at DESC');
         return $this->render('notebooks.index', ['entries' => $result['items'], 'paginator' => $result]);
     }
@@ -154,7 +155,7 @@ class NotebookController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("DELETE FROM eln_entries WHERE id = ?")->execute([$id]);
+        $db->prepare("UPDATE eln_entries SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
         Audit::log('ELN Entry Deleted', 'eln_entries', $id);
         session_flash('success', 'Notebook entry deleted.');
         $this->redirect('/notebooks');

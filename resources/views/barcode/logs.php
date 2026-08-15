@@ -66,9 +66,5 @@
             </tbody>
         </table>
     </div>
-    <?php if (!empty($pagination)): ?>
-    <div class="card-footer d-flex justify-content-center">
-        <nav><?= $pagination ?></nav>
-    </div>
-    <?php endif; ?>
+    <?php require __DIR__ . '/../partials/pagination.php'; ?>
 </div>

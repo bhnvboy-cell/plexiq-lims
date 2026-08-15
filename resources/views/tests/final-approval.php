@@ -14,7 +14,11 @@
                     <td><?= htmlspecialchars($t['customer_name'] ?? 'N/A') ?></td>
                     <td><?= htmlspecialchars($t['product_name'] ?? 'N/A') ?></td>
                     <td><?= htmlspecialchars($t['test_name']) ?></td>
-                    <td><strong><?= htmlspecialchars((string)($t['result_value'] ?? $t['result_text'] ?? '-')) ?></strong></td>
+                    <td><strong><?= htmlspecialchars((string)($t['result_value'] ?? $t['result_text'] ?? '-')) ?></strong>
+                        <?php if (!empty($t['uncertainty'])): ?>
+                        <small class="text-muted d-block">± <?= htmlspecialchars((string)$t['uncertainty']) ?> (k=<?= htmlspecialchars((string)($t['k_factor'] ?? 2)) ?>)</small>
+                        <?php endif; ?>
+                    </td>
                     <td><?= htmlspecialchars($t['spec_limit_text'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($t['reviewed_by_name'] ?? '-') ?></td>
                     <td>

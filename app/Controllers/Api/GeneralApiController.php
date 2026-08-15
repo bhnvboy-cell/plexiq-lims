@@ -48,7 +48,7 @@ class GeneralApiController extends BaseController
         $sample = $stmt->fetch();
         if (!$sample) return $this->json(['error' => 'Not found'], 404);
 
-        $tests = $db->prepare("SELECT st.*, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit, t.unit_id, u.unit_code, u.unit_name FROM sample_tests st JOIN tests t ON st.test_id = t.id LEFT JOIN units u ON t.unit_id = u.id WHERE st.sample_id = ? ORDER BY st.sort_order");
+        $tests = $db->prepare("SELECT st.*, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit, t.spec_limit_text, t.unit_id, u.unit_code, u.unit_name FROM sample_tests st JOIN tests t ON st.test_id = t.id LEFT JOIN units u ON t.unit_id = u.id WHERE st.sample_id = ? ORDER BY st.id");
         $tests->execute([$id]);
         $sample['tests'] = $tests->fetchAll();
 
@@ -72,7 +72,7 @@ class GeneralApiController extends BaseController
 
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare("INSERT INTO samples (sample_code, customer_id, product_id, batch_number, sample_type_id, priority, status, source, created_by) VALUES (?, ?, ?, ?, ?, ?, 'Registered', 'api', ?) RETURNING *");
+            $stmt = $db->prepare("INSERT INTO samples (sample_code, customer_id, product_id, batch_number, sample_type_id, priority, status, registered_by) VALUES (?, ?, ?, ?, ?, ?, 'Registered', ?) RETURNING *");
             $stmt->execute([
                 $sampleCode,
                 $data['customer_id'] ?? null,
@@ -88,8 +88,8 @@ class GeneralApiController extends BaseController
             $testStmt = $db->prepare("SELECT test_id, min_spec_limit, max_spec_limit, spec_limit_text FROM products_tests WHERE product_id = ? AND is_active = TRUE ORDER BY sort_order");
             $testStmt->execute([$data['product_id']]);
             foreach ($testStmt->fetchAll() as $pt) {
-                $db->prepare("INSERT INTO sample_tests (sample_id, test_id, min_spec_limit, max_spec_limit, spec_limit_text, status, sort_order) VALUES (?, ?, ?, ?, ?, 'Pending', 0)")
-                    ->execute([$sample['id'], $pt['test_id'], $pt['min_spec_limit'], $pt['max_spec_limit'], $pt['spec_limit_text']]);
+                $db->prepare("INSERT INTO sample_tests (sample_id, test_id, status) VALUES (?, ?, 'Pending')")
+                    ->execute([$sample['id'], $pt['test_id']]);
             }
 
             $db->commit();
@@ -125,32 +125,30 @@ class GeneralApiController extends BaseController
         $db = Database::connect();
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare("SELECT * FROM sample_tests WHERE id = ?");
+            $stmt = $db->prepare("SELECT st.*, t.min_spec_limit, t.max_spec_limit, t.spec_limit_text, t.unit_id, u.unit_code FROM sample_tests st JOIN tests t ON st.test_id = t.id LEFT JOIN units u ON t.unit_id = u.id WHERE st.id = ?");
             $stmt->execute([$sampleTestId]);
             $st = $stmt->fetch();
             if (!$st) return $this->json(['error' => 'Sample test not found'], 404);
 
-            $resultStatus = 'Completed';
+            $isWithinSpec = null;
             $resultValue = $data['result_value'];
-            if ($st['min_spec_limit'] !== null && $st['max_spec_limit'] !== null) {
-                if (is_numeric($resultValue)) {
-                    $val = (float)$resultValue;
-                    if ($val < (float)$st['min_spec_limit'] || $val > (float)$st['max_spec_limit']) {
-                        $resultStatus = 'Failed';
-                    }
-                }
+            if ($st['min_spec_limit'] !== null && $st['max_spec_limit'] !== null && is_numeric($resultValue)) {
+                $val = (float)$resultValue;
+                $isWithinSpec = ($val >= (float)$st['min_spec_limit'] && $val <= (float)$st['max_spec_limit']);
             }
 
-            $insertStmt = $db->prepare("INSERT INTO results (sample_test_id, result_value, result_status, min_spec_limit, max_spec_limit, spec_limit_text, unit, tested_by, tested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) RETURNING *");
+            $insertStmt = $db->prepare("INSERT INTO results (sample_test_id, result_value, is_within_spec, entered_by, entered_at, remarks) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?) RETURNING *");
             $insertStmt->execute([
-                $sampleTestId, $resultValue, $resultStatus,
-                $st['min_spec_limit'], $st['max_spec_limit'], $st['spec_limit_text'],
-                $data['unit'] ?? null, $_REQUEST['_api_user_id']
+                $sampleTestId,
+                $resultValue,
+                $isWithinSpec === null ? null : ($isWithinSpec ? true : false),
+                $_REQUEST['_api_user_id'],
+                $data['remarks'] ?? null,
             ]);
             $result = $insertStmt->fetch();
 
             $db->prepare("UPDATE sample_tests SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?")
-                ->execute([$resultStatus === 'Failed' ? 'Completed' : 'Completed', $sampleTestId]);
+                ->execute([$isWithinSpec === false ? 'Failed' : 'Completed', $sampleTestId]);
 
             $db->commit();
             return $this->json($result, 201);

@@ -25,7 +25,18 @@ class ClientController extends BaseController
             redirect('/client/login');
         }
 
-        if (Auth::login($username, $password)) {
+        $result = Auth::login($username, $password);
+
+        if ($result === '2fa') {
+            redirect('/login/2fa');
+        }
+
+        if ($result === 'locked') {
+            session_flash('error', 'Account temporarily locked due to too many failed attempts. Try again in 15 minutes.');
+            redirect('/client/login');
+        }
+
+        if ($result === 'ok') {
             if (Auth::role() !== 'Customer') {
                 Auth::logout();
                 session_flash('error', 'This portal is for customers only. Use the main login.');
@@ -139,7 +150,7 @@ class ClientController extends BaseController
                 JOIN samples s ON cd.sample_id = s.id
                 LEFT JOIN products p ON s.product_id = p.id
                 LEFT JOIN users u ON cd.generated_by = u.id
-                WHERE s.customer_id = ?
+                WHERE s.customer_id = ? AND cd.deleted_at IS NULL
                 ORDER BY cd.generated_at DESC
                 LIMIT 50
             ");
@@ -188,7 +199,7 @@ class ClientController extends BaseController
             LEFT JOIN users ru ON s.reviewed_by = ru.id
             LEFT JOIN users au ON s.approved_by = au.id
             LEFT JOIN users cou ON s.coa_released_by = cou.id
-            WHERE cd.id = ? AND s.customer_id = ?
+            WHERE cd.id = ? AND s.customer_id = ? AND cd.deleted_at IS NULL
         ");
         $stmt->execute([$id, $cust['id']]);
         $document = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -201,7 +212,7 @@ class ClientController extends BaseController
         $testStmt = $db->prepare("
             SELECT t.test_name, t.test_code, t.spec_limit_text, t.min_spec_limit, t.max_spec_limit,
                    m.method_name, u.unit_code, u.unit_name,
-                   r.result_value, r.result_text, r.is_within_spec,
+                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor,
                    ent.full_name AS entered_by_name
             FROM sample_tests st
             JOIN tests t ON st.test_id = t.id

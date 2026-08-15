@@ -482,13 +482,15 @@ class MasterDataController extends BaseController
     {
         Auth::requireAnyRole(['Admin', 'Approver']);
         $db = \App\Helpers\Database::connect();
-        $calibrations = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT ic.*, i.instrument_name, i.instrument_code
             FROM instrument_calibrations ic
             JOIN instruments i ON ic.instrument_id = i.id
-            ORDER BY ic.calibration_date DESC
-            LIMIT 100
-        ")->fetchAll(\PDO::FETCH_ASSOC);
+        ", "
+            SELECT COUNT(*)
+            FROM instrument_calibrations ic
+            JOIN instruments i ON ic.instrument_id = i.id
+        ", [], 50, 'ic.calibration_date DESC');
         $upcoming = $db->query("
             SELECT ic.*, i.instrument_name
             FROM instrument_calibrations ic
@@ -497,7 +499,8 @@ class MasterDataController extends BaseController
             ORDER BY ic.next_calibration_date
         ")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->render('master.instrument-calibrations', [
-            'calibrations' => $calibrations,
+            'calibrations' => $result['items'],
+            'paginator' => $result,
             'upcoming' => $upcoming,
         ]);
     }
@@ -548,12 +551,14 @@ class MasterDataController extends BaseController
             $where = 'WHERE status = ?';
             $params[] = $_GET['status'];
         }
-        $stmt = $db->prepare("SELECT * FROM chemical_inventory {$where} ORDER BY chemical_name LIMIT 100");
-        $stmt->execute($params);
-        $chemicals = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $result = \App\Helpers\Pagination::run($db,
+            "SELECT * FROM chemical_inventory {$where}",
+            "SELECT COUNT(*) FROM chemical_inventory {$where}",
+            $params, 50, 'chemical_name');
+        $chemicals = $result['items'];
         $stats = ChemicalInventory::dashboardStats();
         return $this->render('master.chemical-inventory', [
-            'chemicals' => $chemicals, 'stats' => $stats,
+            'chemicals' => $chemicals, 'stats' => $stats, 'paginator' => $result,
         ]);
     }
 
@@ -771,7 +776,7 @@ class MasterDataController extends BaseController
             ->execute([
                 $_POST['config_name'], $_POST['smtp_host'], $_POST['smtp_port'] ?? 587,
                 $_POST['smtp_encryption'] ?? 'tls', $_POST['smtp_username'] ?? null,
-                $_POST['smtp_password'] ? password_hash($_POST['smtp_password'], PASSWORD_DEFAULT) : null,
+                $_POST['smtp_password'] ? \App\Services\Mailer::encrypt($_POST['smtp_password']) : null,
                 $_POST['from_address'], $_POST['from_name'] ?? null,
                 !empty($_POST['is_default']),
             ]);
@@ -801,7 +806,7 @@ class MasterDataController extends BaseController
         $params = [$_POST['config_name'], $_POST['smtp_host'], $_POST['smtp_port'] ?? 587, $_POST['smtp_encryption'] ?? 'tls', $_POST['smtp_username'] ?? null, $_POST['from_address'], $_POST['from_name'] ?? null, !empty($_POST['is_default'])];
         if (!empty($_POST['smtp_password'])) {
             $sql .= ", smtp_password=?";
-            $params[] = password_hash($_POST['smtp_password'], PASSWORD_DEFAULT);
+            $params[] = \App\Services\Mailer::encrypt($_POST['smtp_password']);
         }
         $sql .= " WHERE id=?";
         $params[] = $id;
@@ -823,7 +828,31 @@ class MasterDataController extends BaseController
     public function testEmailConfig(int $id): string
     {
         Auth::requireRole('Admin');
-        return $this->json(['message' => 'Test email functionality requires PHPMailer. Configure SMTP and install phpmailer/phpmailer.']);
+        $db = \App\Helpers\Database::connect();
+        $stmt = $db->prepare("SELECT * FROM email_configurations WHERE id = ?");
+        $stmt->execute([$id]);
+        $config = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$config) {
+            return $this->json(['success' => false, 'message' => 'Email configuration not found.'], 404);
+        }
+
+        $user = Auth::user();
+        $to = $_POST['test_email'] ?? $user['email'] ?? $config['from_address'];
+        if (empty($to)) {
+            return $this->json(['success' => false, 'message' => 'No recipient address available. Provide a test email.'], 400);
+        }
+
+        // Temporarily use the selected config
+        $mailer = new \App\Services\Mailer();
+        $sent = $mailer->send($to, 'PlexiQ LIMS - SMTP Test', '<h3>SMTP Test Email</h3><p>If you are reading this, your SMTP configuration is working correctly.</p><p>Sent at: ' . date('Y-m-d H:i:s') . '</p>');
+
+        if (!$sent) {
+            \App\Helpers\Audit::log('Email Test Failed', 'email_configurations', $id, null, ['error' => $mailer->lastError()]);
+            return $this->json(['success' => false, 'message' => 'Test email failed: ' . $mailer->lastError()]);
+        }
+
+        \App\Helpers\Audit::log('Email Test Sent', 'email_configurations', $id, null, ['to' => $to]);
+        return $this->json(['success' => true, 'message' => "Test email sent to $to."]);
     }
 
     // ============================================================

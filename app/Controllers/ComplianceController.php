@@ -87,28 +87,30 @@ class ComplianceController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $logs = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT pl.*, u.full_name AS user_name
             FROM privacy_logs pl
             LEFT JOIN users u ON pl.user_id = u.id
-            ORDER BY pl.created_at DESC
-            LIMIT 200
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('compliance.privacy-logs', ['logs' => $logs]);
+        ", "
+            SELECT COUNT(*)
+            FROM privacy_logs pl
+        ", [], 50, 'pl.created_at DESC');
+        return $this->render('compliance.privacy-logs', ['logs' => $result['items'], 'paginator' => $result]);
     }
 
     public function consentLogs(): string
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $logs = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT cl.*, u.full_name AS user_name
             FROM consent_logs cl
             LEFT JOIN users u ON cl.user_id = u.id
-            ORDER BY cl.created_at DESC
-            LIMIT 200
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('compliance.consent-logs', ['logs' => $logs]);
+        ", "
+            SELECT COUNT(*)
+            FROM consent_logs cl
+        ", [], 50, 'cl.created_at DESC');
+        return $this->render('compliance.consent-logs', ['logs' => $result['items'], 'paginator' => $result]);
     }
 
     public function deleteRetention(int $id): void

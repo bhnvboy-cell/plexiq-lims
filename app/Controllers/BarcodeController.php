@@ -70,17 +70,17 @@ class BarcodeController extends BaseController
         if ($filters['date_from'] !== '') { $where[] = 'bs.scanned_at >= ?'; $params[] = $filters['date_from']; }
         if ($filters['date_to'] !== '') { $where[] = 'bs.scanned_at <= ?'; $params[] = $filters['date_to'] . ' 23:59:59'; }
         $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-        $stmt = $db->prepare("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT bs.*, u.full_name AS scanned_by_name
             FROM barcode_scan_logs bs
             LEFT JOIN users u ON bs.scanned_by = u.id
             {$whereSql}
-            ORDER BY bs.scanned_at DESC
-            LIMIT 200
-        ");
-        $stmt->execute($params);
-        $logs = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('barcode.logs', ['logs' => $logs, 'filters' => $filters]);
+        ", "
+            SELECT COUNT(*)
+            FROM barcode_scan_logs bs
+            {$whereSql}
+        ", $params, 50, 'bs.scanned_at DESC');
+        return $this->render('barcode.logs', ['logs' => $result['items'], 'paginator' => $result, 'filters' => $filters]);
     }
 
     public function printLabel(string $entityType, int $id): void

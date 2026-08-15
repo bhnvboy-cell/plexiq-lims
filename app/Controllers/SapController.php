@@ -20,11 +20,16 @@ class SapController extends BaseController
             $config[$row['config_key']] = $row;
         }
 
-        $logs = SapSyncLog::recent(50);
+        $logsResult = \App\Helpers\Pagination::run($db, "
+            SELECT * FROM sap_sync_logs
+        ", "
+            SELECT COUNT(*) FROM sap_sync_logs
+        ", [], 50, 'created_at DESC');
 
         return $this->render('sap.index', [
             'config' => $config,
-            'logs' => $logs,
+            'logs' => $logsResult['items'],
+            'paginator' => $logsResult,
         ]);
     }
 

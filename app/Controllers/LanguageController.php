@@ -13,13 +13,14 @@ class LanguageController extends BaseController
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
         $languages = $db->query("SELECT * FROM languages ORDER BY is_default DESC, language_name")->fetchAll(\PDO::FETCH_ASSOC);
-        $translations = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT t.*, l.language_code, l.language_name
             FROM translations t
             JOIN languages l ON t.language_id = l.id
-            ORDER BY l.language_name, t.translation_key
-            LIMIT 500
-        ")->fetchAll(\PDO::FETCH_ASSOC);
+        ", "
+            SELECT COUNT(*)
+            FROM translations t
+        ", [], 50, 'l.language_name, t.translation_key');
         $selectedLang = $_GET['lang'] ?? ($languages[0]['language_code'] ?? 'en');
         $selectedLangName = '';
         foreach ($languages as $l) {
@@ -28,7 +29,8 @@ class LanguageController extends BaseController
         $filters = $_GET['filters'] ?? '';
         return $this->render('languages.index', [
             'languages' => $languages,
-            'translations' => $translations,
+            'translations' => $result['items'],
+            'paginator' => $result,
             'selectedLang' => $selectedLang,
             'selectedLangName' => $selectedLangName,
             'filters' => $filters,
@@ -52,11 +54,11 @@ class LanguageController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO translations (language_id, translation_key, translation_value, group_name) VALUES (?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO translations (language_id, translation_key, translation_value, module) VALUES (?, ?, ?, ?)")->execute([
             $_POST['language_id'],
             $_POST['translation_key'],
             $_POST['translation_value'],
-            $_POST['group_name'] ?? 'general',
+            $_POST['group_name'] ?? $_POST['module'] ?? 'general',
         ]);
         Audit::log('Translation Created', 'translations', null, null, ['key' => $_POST['translation_key'], 'language_id' => $_POST['language_id']]);
         session_flash('success', 'Translation added.');
@@ -67,9 +69,9 @@ class LanguageController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE translations SET translation_value = ?, group_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+        $db->prepare("UPDATE translations SET translation_value = ?, module = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['translation_value'],
-            $_POST['group_name'] ?? 'general',
+            $_POST['group_name'] ?? $_POST['module'] ?? 'general',
             $id,
         ]);
         Audit::log('Translation Updated', 'translations', $id);
@@ -84,7 +86,7 @@ class LanguageController extends BaseController
         $langCode = $_GET['lang'] ?? null;
         if ($langCode) {
             $stmt = $db->prepare("
-                SELECT t.translation_key, t.translation_value, t.group_name
+                SELECT t.translation_key, t.translation_value, t.module
                 FROM translations t
                 JOIN languages l ON t.language_id = l.id
                 WHERE l.language_code = ?
@@ -92,7 +94,7 @@ class LanguageController extends BaseController
             $stmt->execute([$langCode]);
         } else {
             $stmt = $db->query("
-                SELECT t.translation_key, t.translation_value, t.group_name, l.language_code
+                SELECT t.translation_key, t.translation_value, t.module, l.language_code
                 FROM translations t
                 JOIN languages l ON t.language_id = l.id
             ");

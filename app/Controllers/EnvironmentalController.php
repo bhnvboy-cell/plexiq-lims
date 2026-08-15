@@ -73,18 +73,18 @@ class EnvironmentalController extends BaseController
         $stmt->execute([$pointId]);
         $point = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$point) { session_flash('error', 'Point not found.'); $this->redirect('/environmental'); }
-        $readingStmt = $db->prepare("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT er.*, u.full_name AS recorded_by_name
             FROM environmental_readings er
             LEFT JOIN users u ON er.recorded_by = u.id
-            WHERE er.point_id = ?
-            ORDER BY er.created_at DESC
-            LIMIT 500
-        ");
-        $readingStmt->execute([$pointId]);
-        $readings = $readingStmt->fetchAll(\PDO::FETCH_ASSOC);
+            WHERE er.point_id = {$pointId}
+        ", "
+            SELECT COUNT(*)
+            FROM environmental_readings er
+            WHERE er.point_id = {$pointId}
+        ", [], 50, 'er.created_at DESC');
         $points = $db->query("SELECT id, point_name, location_name FROM environmental_points ORDER BY location_name")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('environmental.readings', ['point' => $point, 'points' => $points, 'readings' => $readings, 'selectedPointId' => $pointId]);
+        return $this->render('environmental.readings', ['point' => $point, 'points' => $points, 'readings' => $result['items'], 'paginator' => $result, 'selectedPointId' => $pointId]);
     }
 
     public function addReading(int $pointId): void
@@ -131,14 +131,16 @@ class EnvironmentalController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $alerts = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT ea.*, ep.point_name, ep.location_name, ep.monitoring_type, u.full_name AS resolved_by_name
             FROM environmental_alerts ea
             JOIN environmental_points ep ON ea.point_id = ep.id
             LEFT JOIN users u ON ea.resolved_by = u.id
-            ORDER BY ea.created_at DESC
-            LIMIT 200
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('environmental.alerts', ['alerts' => $alerts]);
+        ", "
+            SELECT COUNT(*)
+            FROM environmental_alerts ea
+            JOIN environmental_points ep ON ea.point_id = ep.id
+        ", [], 50, 'ea.created_at DESC');
+        return $this->render('environmental.alerts', ['alerts' => $result['items'], 'paginator' => $result]);
     }
 }

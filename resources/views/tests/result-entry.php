@@ -44,6 +44,42 @@
                         <label class="form-label">Remarks</label>
                         <textarea name="remarks" class="form-control" rows="2"><?= htmlspecialchars($result['remarks'] ?? '') ?></textarea>
                     </div>
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Measurement Uncertainty</label>
+                            <input type="number" step="any" name="uncertainty" class="form-control"
+                                   value="<?= htmlspecialchars((string)($result['uncertainty'] ?? '')) ?>"
+                                   placeholder="± value">
+                            <small class="text-muted">Expanded uncertainty (same unit as result)</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Coverage Factor (k)</label>
+                            <input type="number" step="any" name="k_factor" class="form-control"
+                                   value="<?= htmlspecialchars((string)($result['k_factor'] ?? '')) ?>"
+                                   placeholder="e.g. 2.0">
+                            <small class="text-muted">Default 2.0 for 95% confidence</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Confidence Interval</label>
+                            <select name="confidence_interval" class="form-select">
+                                <option value="">— Select —</option>
+                                <option value="95%" <?= ($result['confidence_interval'] ?? '') === '95%' ? 'selected' : '' ?>>95%</option>
+                                <option value="99%" <?= ($result['confidence_interval'] ?? '') === '99%' ? 'selected' : '' ?>>99%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Replicate Count</label>
+                        <input type="number" min="1" name="replicate_count" class="form-control"
+                               value="<?= htmlspecialchars((string)($result['replicate_count'] ?? 1)) ?>">
+                        <small class="text-muted">Number of replicate measurements</small>
+                    </div>
+                    <?php if (!empty($result['uncertainty'])): ?>
+                    <div class="alert alert-info">
+                        <strong>Reported result:</strong> <?= htmlspecialchars((string)($result['result_value'] ?? '')) ?> ± <?= htmlspecialchars((string)$result['uncertainty']) ?>
+                        <?= htmlspecialchars($test['unit_code'] ?? '') ?> (k = <?= htmlspecialchars((string)($result['k_factor'] ?? 2)) ?>, <?= htmlspecialchars((string)($result['confidence_interval'] ?? '95%')) ?>)
+                    </div>
+                    <?php endif; ?>
                     <?php if ($test['min_spec_limit'] !== null && $test['max_spec_limit'] !== null): ?>
                     <div class="alert alert-info">
                         <strong>Auto-validation:</strong> Value must be between <?= $test['min_spec_limit'] ?> and <?= $test['max_spec_limit'] ?> <?= $test['unit_code'] ?? '' ?>

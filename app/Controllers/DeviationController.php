@@ -13,10 +13,10 @@ class DeviationController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $status = $_GET['status'] ?? '';
-        $where = '';
+        $where = 'WHERE d.deleted_at IS NULL';
         $params = [];
         if ($status) {
-            $where = 'WHERE d.status = ?';
+            $where .= ' AND d.status = ?';
             $params[] = $status;
         }
         $result = \App\Helpers\Pagination::run($db, "
@@ -47,16 +47,17 @@ class DeviationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO deviations (deviation_number, title, description, deviation_type, severity, product_id, batch_number, root_cause, immediate_action, reported_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
-            $_POST['deviation_number'] ?? 'DEV-' . time(),
+        $db->prepare("INSERT INTO deviations (deviation_code, title, description, deviation_type, severity, product_id, source, root_cause, corrective_action, preventive_action, reported_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
+            $_POST['deviation_number'] ?? $_POST['deviation_code'] ?? 'DEV-' . time(),
             $_POST['title'],
             $_POST['description'],
             $_POST['deviation_type'] ?? 'Process',
             $_POST['severity'] ?? 'Minor',
             $_POST['product_id'] ?: null,
-            $_POST['batch_number'] ?? null,
+            $_POST['source'] ?? 'Internal',
             $_POST['root_cause'] ?? null,
             $_POST['immediate_action'] ?? null,
+            $_POST['corrective_action'] ?? null,
             Auth::id(),
             'Open',
         ]);
@@ -108,15 +109,18 @@ class DeviationController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE deviations SET title = ?, description = ?, deviation_type = ?, severity = ?, product_id = ?, batch_number = ?, root_cause = ?, immediate_action = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+        $db->prepare("UPDATE deviations SET title = ?, description = ?, deviation_type = ?, severity = ?, product_id = ?, source = ?, source_id = ?, impact_assessment = ?, root_cause = ?, corrective_action = ?, preventive_action = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['title'],
             $_POST['description'],
             $_POST['deviation_type'] ?? 'Process',
             $_POST['severity'] ?? 'Minor',
             $_POST['product_id'] ?: null,
-            $_POST['batch_number'] ?? null,
+            $_POST['source'] ?? 'Internal',
+            $_POST['source_id'] ?? null,
+            $_POST['impact_assessment'] ?? null,
             $_POST['root_cause'] ?? null,
             $_POST['immediate_action'] ?? null,
+            $_POST['corrective_action'] ?? null,
             $_POST['status'] ?? 'Open',
             $id,
         ]);

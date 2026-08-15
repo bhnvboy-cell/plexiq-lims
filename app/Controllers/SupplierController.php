@@ -132,14 +132,16 @@ class SupplierController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO supplier_qualifications (supplier_id, assessment_date, assessor_name, qualification_status, score, findings, assessed_by) VALUES (?, ?, ?, ?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO supplier_qualifications (supplier_id, qualification_type, qualification_date, result, certificate_number, audited_by, expiry_date, notes, attachment_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
             $id,
-            $_POST['assessment_date'] ?? date('Y-m-d'),
-            $_POST['assessor_name'] ?? null,
-            $_POST['qualification_status'] ?? 'Pending',
-            $_POST['score'] ?: null,
-            $_POST['findings'] ?? null,
+            $_POST['qualification_type'] ?? 'Audit',
+            $_POST['qualification_date'] ?? $_POST['assessment_date'] ?? date('Y-m-d'),
+            $_POST['result'] ?? $_POST['qualification_status'] ?? 'Pending',
+            $_POST['certificate_number'] ?? null,
             Auth::id(),
+            $_POST['expiry_date'] ?: null,
+            $_POST['notes'] ?? $_POST['findings'] ?? null,
+            $_POST['attachment_path'] ?? null,
         ]);
         Audit::log('Supplier Qualification Added', 'supplier_qualifications', null, null, ['supplier_id' => $id]);
         session_flash('success', 'Qualification recorded.');

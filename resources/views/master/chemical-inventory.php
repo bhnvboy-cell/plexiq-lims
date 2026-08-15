@@ -44,6 +44,7 @@
             </tbody>
         </table>
     </div>
+    <?php require __DIR__ . '/../partials/pagination.php'; ?>
 </div>
 <div class="modal fade" id="chemModal" tabindex="-1">
     <div class="modal-dialog modal-lg"><div class="modal-content">

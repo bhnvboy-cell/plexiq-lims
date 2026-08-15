@@ -14,10 +14,11 @@ class Batch extends BaseModel
         $stmt = $db->query("
             SELECT b.*, p.product_code, p.product_name, p.category,
                    u.full_name AS created_by_name,
-                   (SELECT COUNT(*) FROM samples s WHERE s.batch_id = b.id) AS sample_count
+                   (SELECT COUNT(*) FROM samples s WHERE s.batch_id = b.id AND s.deleted_at IS NULL) AS sample_count
             FROM batches b
             LEFT JOIN products p ON b.product_id = p.id
             LEFT JOIN users u ON b.created_by = u.id
+            WHERE b.deleted_at IS NULL
             ORDER BY b.created_at DESC
         ");
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -32,7 +33,7 @@ class Batch extends BaseModel
             FROM batches b
             LEFT JOIN products p ON b.product_id = p.id
             LEFT JOIN users u ON b.created_by = u.id
-            WHERE b.id = ?
+            WHERE b.id = ? AND b.deleted_at IS NULL
         ");
         $stmt->execute([$id]);
         $batch = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -43,7 +44,7 @@ class Batch extends BaseModel
             SELECT s.*, c.customer_name
             FROM samples s
             LEFT JOIN customers c ON s.customer_id = c.id
-            WHERE s.batch_id = ? ORDER BY s.created_at
+            WHERE s.batch_id = ? AND s.deleted_at IS NULL ORDER BY s.created_at
         ");
         $stmt2->execute([$id]);
         $batch['samples'] = $stmt2->fetchAll(\PDO::FETCH_ASSOC);

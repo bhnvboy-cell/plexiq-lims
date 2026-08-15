@@ -134,6 +134,58 @@
     </div>
 </div>
 
+<!-- Chain of Custody -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-signpost-2"></i> Chain of Custody</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cocModal">
+            <i class="bi bi-plus"></i> Record Transfer
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <?php if (empty($custody)): ?>
+        <p class="text-center text-muted py-4 mb-0">No custody transfers recorded for this sample.</p>
+        <?php else: ?>
+        <table class="table table-hover mb-0">
+            <thead><tr><th>#</th><th>From</th><th>To</th><th>Transferred</th><th>Received</th><th>Location</th><th>Seal</th><th>Reason</th></tr></thead>
+            <tbody>
+                <?php foreach ($custody as $i => $c): ?>
+                <tr>
+                    <td><?= $i + 1 ?></td>
+                    <td><?= htmlspecialchars($c['transfer_from'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($c['transfer_to'] ?? '-') ?></td>
+                    <td>
+                        <small class="text-muted"><?= date('Y-m-d H:i', strtotime($c['transferred_at'])) ?></small>
+                        <div class="small"><?= htmlspecialchars($c['transferred_by_name'] ?? '-') ?></div>
+                    </td>
+                    <td>
+                        <?php if ($c['received_at']): ?>
+                            <small class="text-muted"><?= date('Y-m-d H:i', strtotime($c['received_at'])) ?></small>
+                            <div class="small"><?= htmlspecialchars($c['received_by_name'] ?? '-') ?></div>
+                        <?php else: ?>
+                            <form method="POST" action="/coc/<?= $c['id'] ?>/receive" class="d-inline">
+                                <input type="hidden" name="_csrf_token" value="<?= e(csrf_token()) ?>">
+                                <button class="btn btn-sm btn-outline-success"><i class="bi bi-check"></i> Receive</button>
+                            </form>
+                        <?php endif; ?>
+                    </td>
+                    <td><?= htmlspecialchars($c['location'] ?? '-') ?></td>
+                    <td>
+                        <?php if ($c['sealed']): ?>
+                            <span class="badge bg-info"><?= htmlspecialchars($c['seal_number'] ?? 'Sealed') ?></span>
+                        <?php else: ?>
+                            <span class="text-muted">-</span>
+                        <?php endif; ?>
+                    </td>
+                    <td><small class="text-muted"><?= htmlspecialchars($c['custody_reason'] ?? '-') ?></small></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+</div>
+
 <!-- Assign Tests Modal -->
 <div class="modal fade" id="assignTestsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -165,6 +217,64 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Assign Tests</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Chain of Custody Transfer Modal -->
+<div class="modal fade" id="cocModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="/samples/<?= $sample['id'] ?>/coc">
+                <?= csrf_field() ?>
+                <div class="modal-header"><h5 class="modal-title">Record Custody Transfer</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Transfer From</label>
+                            <input type="text" name="transfer_from" class="form-control" placeholder="e.g. Sample Receiving">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Transfer To</label>
+                            <input type="text" name="transfer_to" class="form-control" placeholder="e.g. Analytical Lab">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Transferred At</label>
+                            <input type="datetime-local" name="transferred_at" class="form-control" value="<?= date('Y-m-d\TH:i') ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" name="location" class="form-control" placeholder="e.g. Storage Room A">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason / Purpose</label>
+                        <input type="text" name="custody_reason" class="form-control" placeholder="e.g. Analysis, Storage, External testing">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Condition Note</label>
+                        <textarea name="condition_note" class="form-control" rows="2" placeholder="e.g. Sample intact, seal present"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="sealed" id="cocSealed">
+                                <label class="form-check-label" for="cocSealed">Sealed</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Seal Number</label>
+                            <input type="text" name="seal_number" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Record Transfer</button>
                 </div>
             </form>
         </div>

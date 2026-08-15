@@ -289,17 +289,32 @@ class BatchController extends BaseController
     {
         Auth::requireAnyRole(['Admin', 'Analyst']);
         $db = \App\Helpers\Database::connect();
-        $stStmt = $db->prepare("SELECT st.*, s.batch_id FROM sample_tests st JOIN samples s ON st.sample_id = s.id WHERE st.id = ?");
+        $stStmt = $db->prepare("SELECT st.*, s.batch_id, s.sample_code FROM sample_tests st JOIN samples s ON st.sample_id = s.id WHERE st.id = ?");
         $stStmt->execute([$sampleTestId]);
         $st = $stStmt->fetch(\PDO::FETCH_ASSOC);
         if (!$st) { session_flash('error', 'Sample test not found.'); redirect('/batches'); }
         $db->beginTransaction();
         try {
-            $db->prepare("DELETE FROM results WHERE sample_test_id = ?")->execute([$sampleTestId]);
-            $db->prepare("UPDATE sample_tests SET status = 'Pending', completed_at = NULL, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$sampleTestId]);
+            // Preserve the previous result as an immutable revision instead of destroying it
+            $resultStmt = $db->prepare("SELECT * FROM results WHERE sample_test_id = ? AND deleted_at IS NULL ORDER BY revision DESC LIMIT 1");
+            $resultStmt->execute([$sampleTestId]);
+            $existing = $resultStmt->fetch(\PDO::FETCH_ASSOC);
+            if ($existing) {
+                \App\Models\Result::saveRevision(
+                    $existing['id'],
+                    $existing['revision'],
+                    $existing['result_value'],
+                    $existing['result_text'],
+                    $existing['entered_by'],
+                    'Archived before retest'
+                );
+                $db->prepare("UPDATE results SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL")
+                    ->execute([$existing['id']]);
+            }
+            $db->prepare("UPDATE sample_tests SET status = 'Pending', completed_at = NULL, reviewed_at = NULL, approved_at = NULL, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$sampleTestId]);
             $db->commit();
-            Audit::log('Test Sent for Retest', 'sample_tests', $sampleTestId);
-            session_flash('success', 'Test reset to Pending for re-analysis.');
+            Audit::log('Test Sent for Retest', 'sample_tests', $sampleTestId, null, ['sample_code' => $st['sample_code'] ?? null, 'reason' => $_POST['retest_reason'] ?? null]);
+            session_flash('success', 'Test reset to Pending for re-analysis. Previous result archived.');
         } catch (\Exception $e) {
             $db->rollBack();
             session_flash('error', 'Error resetting test: ' . $e->getMessage());
@@ -315,7 +330,7 @@ class BatchController extends BaseController
         $stStmt->execute([$sampleTestId]);
         $st = $stStmt->fetch(\PDO::FETCH_ASSOC);
         if (!$st) { session_flash('error', 'Sample test not found.'); redirect('/batches'); }
-        $db->prepare("DELETE FROM sample_tests WHERE id = ?")->execute([$sampleTestId]);
+        $db->prepare("UPDATE sample_tests SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL")->execute([$sampleTestId]);
         Audit::log('Test Removed from Batch', 'sample_tests', $sampleTestId);
         session_flash('success', 'Test removed from sample.');
         redirect('/batches/' . ($st['batch_id'] ?? 0));

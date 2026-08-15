@@ -47,8 +47,14 @@
             <a href="/samples" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/samples') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i><span>Samples</span>
             </a>
+            <a href="/coc" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/coc') ? 'active' : '' ?>">
+                <i class="bi bi-signpost-2"></i><span>Chain of Custody</span>
+            </a>
             <a href="/spc" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/spc') ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-steps"></i><span>SPC Charts</span>
+            </a>
+            <a href="/qc" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/qc') ? 'active' : '' ?>">
+                <i class="bi bi-shield-check"></i><span>QC Control</span>
             </a>
             <a href="/tests/pending" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/tests/pending') ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data"></i><span>Results Entry</span>

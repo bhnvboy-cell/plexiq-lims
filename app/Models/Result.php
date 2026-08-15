@@ -18,7 +18,7 @@ class Result extends BaseModel
             LEFT JOIN users u ON r.entered_by = u.id
             LEFT JOIN users ru ON r.reviewed_by = ru.id
             LEFT JOIN users au ON r.approved_by = au.id
-            WHERE r.sample_test_id = ?
+            WHERE r.sample_test_id = ? AND r.deleted_at IS NULL
             ORDER BY r.revision DESC
             LIMIT 1
         ");

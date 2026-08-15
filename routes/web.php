@@ -23,8 +23,14 @@ use App\Middleware\AuthMiddleware;
 // ============================================================
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
 $router->post('/login', [AuthController::class, 'login'], ['guest']);
+$router->get('/login/2fa', [AuthController::class, 'showTwoFactor'], ['guest']);
+$router->post('/login/2fa', [AuthController::class, 'verifyTwoFactor'], ['guest']);
+$router->post('/login/2fa/cancel', [AuthController::class, 'cancelTwoFactor'], ['guest']);
 $router->get('/logout', [AuthController::class, 'logout']);
 $router->get('/profile', [AuthController::class, 'profile'], ['auth']);
+$router->get('/profile/2fa/setup', [AuthController::class, 'setupTwoFactor'], ['auth']);
+$router->post('/profile/2fa/enable', [AuthController::class, 'enableTwoFactor'], ['auth']);
+$router->post('/profile/2fa/disable', [AuthController::class, 'disableTwoFactor'], ['auth']);
 
 // ============================================================
 // DASHBOARD
@@ -214,6 +220,24 @@ $router->get('/spc', [\App\Controllers\SpcController::class, 'index'], ['auth'])
 $router->get('/spc/{id}', [\App\Controllers\SpcController::class, 'detail'], ['auth']);
 $router->get('/spc/{id}/calculate', [\App\Controllers\SpcController::class, 'calculate'], ['auth']);
 $router->post('/spc/{id}/readings', [\App\Controllers\SpcController::class, 'storeReading'], ['auth']);
+
+// ============================================================
+// QUALITY CONTROL (Levey-Jennings / Westgard)
+// ============================================================
+$router->get('/qc', [\App\Controllers\QcController::class, 'index'], ['auth']);
+$router->post('/qc/create', [\App\Controllers\QcController::class, 'create'], ['auth']);
+$router->get('/qc/{id}', [\App\Controllers\QcController::class, 'detail'], ['auth']);
+$router->post('/qc/{id}/results', [\App\Controllers\QcController::class, 'storeResult'], ['auth']);
+$router->get('/qc/{id}/assess', [\App\Controllers\QcController::class, 'assess'], ['auth']);
+$router->post('/qc/{id}/delete', [\App\Controllers\QcController::class, 'delete'], ['auth']);
+
+// ============================================================
+// CHAIN OF CUSTODY
+// ============================================================
+$router->get('/coc', [\App\Controllers\CocController::class, 'index'], ['auth']);
+$router->post('/samples/{id}/coc', [\App\Controllers\CocController::class, 'store'], ['auth']);
+$router->post('/coc/{id}/receive', [\App\Controllers\CocController::class, 'receive'], ['auth']);
+$router->post('/coc/{id}/delete', [\App\Controllers\CocController::class, 'delete'], ['auth']);
 
 // ============================================================
 // PROJECTS

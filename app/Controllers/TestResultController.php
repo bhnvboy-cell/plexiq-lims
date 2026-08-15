@@ -25,7 +25,7 @@ class TestResultController extends BaseController
             LEFT JOIN customers c ON s.customer_id = c.id
             LEFT JOIN products p ON s.product_id = p.id
             LEFT JOIN users u ON st.assigned_to = u.id
-            WHERE st.status IN ('Pending', 'In Progress')
+            WHERE st.status IN ('Pending', 'In Progress') AND st.deleted_at IS NULL AND s.deleted_at IS NULL
             ORDER BY s.priority DESC, s.created_at ASC
         ");
 
@@ -46,7 +46,7 @@ class TestResultController extends BaseController
             JOIN tests t ON st.test_id = t.id
             LEFT JOIN units u ON t.unit_id = u.id
             LEFT JOIN methods m ON t.method_id = m.id
-            WHERE st.id = ?
+            WHERE st.id = ? AND st.deleted_at IS NULL
         ");
         $stmt->execute([$sampleTestId]);
         $test = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -93,12 +93,16 @@ class TestResultController extends BaseController
         $value = $_POST['result_value'] ?? null;
         $text = $_POST['result_text'] ?? null;
         $remarks = $_POST['remarks'] ?? null;
+        $uncertainty = $_POST['uncertainty'] !== '' ? $_POST['uncertainty'] : null;
+        $kFactor = $_POST['k_factor'] !== '' ? $_POST['k_factor'] : null;
+        $confidenceInterval = $_POST['confidence_interval'] ?: null;
+        $replicateCount = $_POST['replicate_count'] !== '' ? (int)$_POST['replicate_count'] : 1;
 
         // Get test specs
         $stmt = $db->prepare("
             SELECT t.*, st.status FROM sample_tests st
             JOIN tests t ON st.test_id = t.id
-            WHERE st.id = ?
+            WHERE st.id = ? AND st.deleted_at IS NULL
         ");
         $stmt->execute([$sampleTestId]);
         $spec = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -136,17 +140,19 @@ class TestResultController extends BaseController
                 $stmt = $db->prepare("
                     UPDATE results SET result_value = ?, result_text = ?, is_within_spec = ?,
                         entered_by = ?, entered_at = CURRENT_TIMESTAMP, remarks = ?,
+                        uncertainty = ?, k_factor = ?, confidence_interval = ?, replicate_count = ?,
                         revision = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                $stmt->execute([$value, $text, $isWithinSpec, Auth::id(), $remarks, $revision, $resultId]);
+                $stmt->execute([$value, $text, $isWithinSpec, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision, $resultId]);
             } else {
                 // Create new result
                 $stmt = $db->prepare("
-                    INSERT INTO results (sample_test_id, result_value, result_text, is_within_spec, entered_by, remarks, revision)
-                    VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+                    INSERT INTO results (sample_test_id, result_value, result_text, is_within_spec, entered_by, remarks,
+                        uncertainty, k_factor, confidence_interval, replicate_count, revision)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
                 ");
-                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpec, Auth::id(), $remarks, $revision]);
+                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpec, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision]);
                 $resultId = (int)$stmt->fetchColumn();
             }
 
@@ -189,6 +195,7 @@ class TestResultController extends BaseController
         $stmt = $db->query("
             SELECT st.*, s.sample_code, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit,
                    r.result_value, r.result_text, r.is_within_spec, r.id AS result_id,
+                   r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count,
                    u.full_name AS entered_by_name, ue.full_name AS assigned_to_name,
                    c.customer_name, p.product_name
             FROM sample_tests st
@@ -201,7 +208,7 @@ class TestResultController extends BaseController
             LEFT JOIN users ue ON st.assigned_to = ue.id
             LEFT JOIN customers c ON s.customer_id = c.id
             LEFT JOIN products p ON s.product_id = p.id
-            WHERE st.status = 'Completed'
+            WHERE st.status = 'Completed' AND st.deleted_at IS NULL AND s.deleted_at IS NULL
             ORDER BY s.priority DESC, r.entered_at ASC
         ");
 
@@ -226,7 +233,18 @@ class TestResultController extends BaseController
             }
 
             // Check if all tests are reviewed
-            $sampleId = $db->prepare("SELECT sample_id FROM sample_tests WHERE id = ?")->execute([$sampleTestId]);
+            $stmt = $db->prepare("SELECT sample_id FROM sample_tests WHERE id = ?");
+            $stmt->execute([$sampleTestId]);
+            $sampleId = $stmt->fetchColumn();
+            if ($sampleId) {
+                $pending = $db->prepare("SELECT COUNT(*) FROM sample_tests WHERE sample_id = ? AND status NOT IN ('Reviewed', 'Approved')");
+                $pending->execute([$sampleId]);
+                if ((int)$pending->fetchColumn() === 0) {
+                    $db->prepare("UPDATE samples SET status = 'Reviewed', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        ->execute([Auth::id(), $sampleId]);
+                    Audit::log('Sample Reviewed (all tests)', 'samples', (int)$sampleId);
+                }
+            }
 
             Audit::log('Result Reviewed', 'results', $result['id'] ?? null);
             session_flash('success', 'Result reviewed and approved.');
@@ -247,6 +265,7 @@ class TestResultController extends BaseController
         $stmt = $db->query("
             SELECT st.*, s.sample_code, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit,
                    r.result_value, r.result_text, r.is_within_spec, r.id AS result_id,
+                   r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count,
                    u.full_name AS entered_by_name, ru.full_name AS reviewed_by_name,
                    c.customer_name, p.product_name
             FROM sample_tests st
@@ -259,7 +278,7 @@ class TestResultController extends BaseController
             LEFT JOIN users ru ON r.reviewed_by = ru.id
             LEFT JOIN customers c ON s.customer_id = c.id
             LEFT JOIN products p ON s.product_id = p.id
-            WHERE st.status = 'Reviewed'
+            WHERE st.status = 'Reviewed' AND st.deleted_at IS NULL AND s.deleted_at IS NULL
             ORDER BY s.priority DESC, r.reviewed_at ASC
         ");
 

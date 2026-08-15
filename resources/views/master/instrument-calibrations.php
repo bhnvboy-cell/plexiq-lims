@@ -30,3 +30,4 @@
         </table>
     </div>
 </div>
+<?php require __DIR__ . '/../partials/pagination.php'; ?>

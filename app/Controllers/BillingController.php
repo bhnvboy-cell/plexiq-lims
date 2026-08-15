@@ -155,14 +155,24 @@ class BillingController extends BaseController
             $_POST['unit_price'] ?? 0,
             ($_POST['quantity'] ?? 1) * ($_POST['unit_price'] ?? 0),
         ]);
-        // Recalculate invoice totals
+        // Recalculate invoice totals (honoring the stored discount)
+        $stmt = $db->prepare("SELECT tax_amount, discount_amount FROM invoices WHERE id = ?");
+        $stmt->execute([$id]);
+        $inv = $stmt->fetch(\PDO::FETCH_ASSOC);
+
         $stmt = $db->prepare("SELECT SUM(total_price) AS subtotal FROM invoice_items WHERE invoice_id = ?");
         $stmt->execute([$id]);
         $subtotal = (float)($stmt->fetchColumn() ?: 0);
-        $taxRate = (float)($_POST['tax_rate'] ?? 0);
-        $taxAmount = $subtotal * ($taxRate / 100);
-        $total = $subtotal + $taxAmount;
-        $db->prepare("UPDATE invoices SET subtotal = ?, tax_amount = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$subtotal, $taxAmount, $total, $id]);
+
+        // Discount stored as a flat amount on the invoice.
+        $discountAmount = min((float)($inv['discount_amount'] ?? 0), $subtotal);
+        // Tax: if a rate is posted, apply it to the discounted subtotal; otherwise keep stored tax amount.
+        $postedRate = (float)($_POST['tax_rate'] ?? 0);
+        $taxAmount = $postedRate > 0
+            ? ($subtotal - $discountAmount) * ($postedRate / 100)
+            : (float)($inv['tax_amount'] ?? 0);
+        $total = $subtotal - $discountAmount + $taxAmount;
+        $db->prepare("UPDATE invoices SET subtotal = ?, discount_amount = ?, tax_amount = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$subtotal, $discountAmount, $taxAmount, $total, $id]);
         Audit::log('Invoice Item Added', 'invoice_items', null, null, ['invoice_id' => $id]);
         session_flash('success', 'Item added to invoice.');
         $this->redirect('/billing/' . $id);

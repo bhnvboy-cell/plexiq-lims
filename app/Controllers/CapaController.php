@@ -118,7 +118,7 @@ class CapaController extends BaseController
     public function delete(int $id): void
     {
         Auth::requireRole('Admin');
-        CapaRecord::delete($id);
+        CapaRecord::softDelete($id);
         Audit::log('CAPA Record Deleted', 'capa_records', $id);
         session_flash('success', 'CAPA record deleted.');
         redirect('/capa');

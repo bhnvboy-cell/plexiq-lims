@@ -72,7 +72,7 @@
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="bi bi-table me-1"></i>Readings</h6>
-                <span class="badge bg-secondary"><?= count($readings ?? []) ?> records</span>
+                <span class="badge bg-secondary"><?= number_format($paginator['total'] ?? count($readings ?? [])) ?> records</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -111,6 +111,7 @@
                     </tbody>
                 </table>
             </div>
+            <?php require __DIR__ . '/../partials/pagination.php'; ?>
         </div>
     </div>
 </div>

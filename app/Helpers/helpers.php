@@ -221,8 +221,9 @@ if (!function_exists('notify')) {
     {
         try {
             $db = \App\Helpers\Database::connect();
-            $stmt = $db->prepare("INSERT INTO notifications (user_id, notification_type, title, message, link) VALUES (?, ?, ?, ?, ?)");
+            $stmt = $db->prepare("INSERT INTO notifications (user_id, notification_type, title, message, link, sent_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)");
             $stmt->execute([$userId, $type, $title, $message, $link]);
+            \App\Models\Notification::deliverEmail($userId, $title, $message, $link);
         } catch (\Exception $e) {
             error_log("Notification error: " . $e->getMessage());
         }

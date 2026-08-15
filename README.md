@@ -15,18 +15,22 @@ PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management
 - Full lifecycle tracking (login → testing → approval → COA)
 - Multi-stage approval workflow (Analyst → Reviewer → Approver)
 - Barcode/QR code generation and scanning
-- Test result entry with specification limits
+- Test result entry with specification limits and measurement uncertainty (value ± expanded uncertainty with coverage factor k and confidence interval)
+- Chain of custody tracking (`/coc`) — sealed custody transfers, receipt acknowledgment, and a per-sample custody timeline
 
 **Quality Management**
 - OOS (Out-of-Specification) investigations
 - CAPA (Corrective and Preventive Actions)
 - Deviation management with action tracking
 - Analysis parameter management (spec limits, per-sample assignment, Analyst -> Reviewer -> Approver result workflow)
-- SPC control charts (X-bar, R, Sigma)
+- SPC control charts (X-bar, R, Sigma) with Nelson out-of-control rules (all 8 rules, violations highlighted on chart)
+- QC control module (`/qc`) — control lots, Levey-Jennings charts with ±1/2/3 SD bands, Westgard multi-rules (1₃ₛ, 2₂ₛ, R₄ₛ, 4₁ₛ, 10ₓ)
 - Stability studies with multi-timepoint tracking
 
 **Regulatory Compliance**
 - 21 CFR Part 11 electronic signatures & audit trail
+- Two-factor authentication (TOTP) with per-user QR setup and recovery codes
+- Soft deletes across all master records — historical data and audit trails are retained while records are hidden from active workflows
 - GDPR data privacy & consent logging
 - HIPAA compliance controls
 - Data retention policies
@@ -74,7 +78,7 @@ PlexiQ ships with production-grade scalability features that are safe to enable 
 
 | Feature | How to enable | Notes |
 |---------|--------------|-------|
-| **List pagination** | On by default | All large list pages (billing, COA, deviations, ELN, stability, notifications, calibrations, inventory) paginate at 20 rows/page with prev/next controls and a record count. |
+| **List pagination** | On by default | All large list pages (billing, COA, deviations, ELN, stability, notifications, calibrations, inventory, users, audit login history, environmental readings/alerts, compliance logs, barcode scan logs, training courses, SAP sync logs, translations) paginate with prev/next controls and a record count. |
 | **Dashboard caching** | `CACHE_DRIVER=file` in `.env` | Dashboard stats and recent samples are cached for 60s; caches are invalidated automatically when samples change. `redis` is supported for multi-node setups. |
 | **Database sessions** | `SESSION_DRIVER=database` | Sessions stored in the `sessions` table — required when running multiple web servers behind a load balancer (file sessions won't share). |
 | **Async job queue** | `QUEUE_DRIVER=database` + run the worker | Webhook deliveries are enqueued and processed in the background instead of blocking requests. See "Queue Worker" below. |
@@ -143,7 +147,7 @@ Then visit `http://localhost:8080` and run the web installer.
    ```bash
    for %f in (database/migrations/*.sql) do psql -U postgres -d limsdb -f "%f"
    ```
-   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver). `013_backup.sql` adds the `backup_settings`/`backup_runs` tables used by the Backup & Restore module, and `014_analysis_parameters.sql` adds the analysis parameter master, sample/batch assignments and instrument column mapping used by the Analysis Parameters module — apply all migrations, or the affected pages will fail.
+   > **Note:** migration `011_notification_settings.sql` creates the `notification_settings` table required by the Notifications module, and `012_scalability.sql` adds the `jobs`/`sessions` tables and performance indexes (required by the queue worker and database session driver). `013_backup.sql` adds the `backup_settings`/`backup_runs` tables used by the Backup & Restore module, and `014_analysis_parameters.sql` adds the analysis parameter master, sample/batch assignments and instrument column mapping used by the Analysis Parameters module — apply all migrations, or the affected pages will fail. `015_foundation_security.sql` adds TOTP 2FA columns and audit/retention security rows, and `016_coa_template_columns.sql` adds COA template layout fields (page size, watermark, QR toggle).
 5. Start the dev server (or double-click `serve.bat`):
    ```bash
    C:\xampp\php\php.exe -S 0.0.0.0:8080 -t public public/router.php

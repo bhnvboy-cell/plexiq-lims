@@ -35,6 +35,7 @@ class CapaRecord extends BaseModel
             FROM capa_records c
             LEFT JOIN users u1 ON c.assigned_to = u1.id
             LEFT JOIN users u2 ON c.created_by = u2.id
+            WHERE c.deleted_at IS NULL
             ORDER BY c.created_at DESC
         ")->fetchAll();
     }

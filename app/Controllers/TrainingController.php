@@ -12,13 +12,14 @@ class TrainingController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $courses = $db->query("
+        $coursesResult = \App\Helpers\Pagination::run($db, "
             SELECT c.*,
                 (SELECT COUNT(*) FROM training_assignments ta WHERE ta.course_id = c.id) AS assigned_count,
                 (SELECT COUNT(*) FROM training_assignments ta WHERE ta.course_id = c.id AND ta.completed_date IS NOT NULL) AS completed_count
             FROM training_courses c
-            ORDER BY c.created_at DESC
-        ")->fetchAll(\PDO::FETCH_ASSOC);
+        ", "
+            SELECT COUNT(*) FROM training_courses c
+        ", [], 20, 'c.created_at DESC');
         $assignments = $db->query("
             SELECT ta.*, c.course_name, c.course_code, u.full_name AS user_name
             FROM training_assignments ta
@@ -27,20 +28,26 @@ class TrainingController extends BaseController
             ORDER BY ta.due_date ASC
             LIMIT 50
         ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('training.index', ['courses' => $courses, 'assignments' => $assignments]);
+        return $this->render('training.index', [
+            'courses' => $coursesResult['items'],
+            'paginator' => $coursesResult,
+            'assignments' => $assignments,
+        ]);
     }
 
     public function courses(): string
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $courses = $db->query("
+        $result = \App\Helpers\Pagination::run($db, "
             SELECT c.*, u.full_name AS created_by_name
             FROM training_courses c
             LEFT JOIN users u ON c.created_by = u.id
-            ORDER BY c.course_name
-        ")->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->render('training.courses', ['courses' => $courses]);
+        ", "
+            SELECT COUNT(*)
+            FROM training_courses c
+        ", [], 20, 'c.course_name');
+        return $this->render('training.courses', ['courses' => $result['items'], 'paginator' => $result]);
     }
 
     public function createCourse(): string
@@ -53,13 +60,14 @@ class TrainingController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO training_courses (course_code, course_name, description, category, duration_hours, frequency_days, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")->execute([
+        $db->prepare("INSERT INTO training_courses (course_code, course_name, description, course_type, duration_hours, validity_days, provider, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")->execute([
             $_POST['course_code'],
             $_POST['course_name'],
             $_POST['description'] ?? null,
-            $_POST['category'] ?? 'General',
+            $_POST['category'] ?? $_POST['course_type'] ?? 'General',
             $_POST['duration_hours'] ?: null,
-            $_POST['frequency_days'] ?: null,
+            $_POST['frequency_days'] ?? $_POST['validity_days'] ?: null,
+            $_POST['provider'] ?? null,
             Auth::id(),
         ]);
         $courseId = $db->lastInsertId();
@@ -83,13 +91,14 @@ class TrainingController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE training_courses SET course_code = ?, course_name = ?, description = ?, category = ?, duration_hours = ?, frequency_days = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+        $db->prepare("UPDATE training_courses SET course_code = ?, course_name = ?, description = ?, course_type = ?, duration_hours = ?, validity_days = ?, provider = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['course_code'],
             $_POST['course_name'],
             $_POST['description'] ?? null,
-            $_POST['category'] ?? 'General',
+            $_POST['category'] ?? $_POST['course_type'] ?? 'General',
             $_POST['duration_hours'] ?: null,
-            $_POST['frequency_days'] ?: null,
+            $_POST['frequency_days'] ?? $_POST['validity_days'] ?: null,
+            $_POST['provider'] ?? null,
             !empty($_POST['is_active']),
             $id,
         ]);
