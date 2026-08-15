@@ -27,9 +27,13 @@ class LanguageController extends BaseController
             if ($l['language_code'] === $selectedLang) { $selectedLangName = $l['language_name']; break; }
         }
         $filters = $_GET['filters'] ?? '';
+        $translationsMap = [];
+        foreach ($result['items'] as $trow) {
+            $translationsMap[$trow['translation_key']] = $trow['translation_value'];
+        }
         return $this->render('languages.index', [
             'languages' => $languages,
-            'translations' => $result['items'],
+            'translations' => $translationsMap,
             'paginator' => $result,
             'selectedLang' => $selectedLang,
             'selectedLangName' => $selectedLangName,

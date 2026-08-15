@@ -117,6 +117,7 @@ class TestResultController extends BaseController
         if ($value !== null && $value !== '' && $spec['min_spec_limit'] !== null && $spec['max_spec_limit'] !== null) {
             $isWithinSpec = Result::validateAgainstSpec((float)$value, (float)$spec['min_spec_limit'], (float)$spec['max_spec_limit']);
         }
+        $isWithinSpecParam = $isWithinSpec === null ? null : ($isWithinSpec ? 't' : 'f');
 
         $db->beginTransaction();
         try {
@@ -144,7 +145,7 @@ class TestResultController extends BaseController
                         revision = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                $stmt->execute([$value, $text, $isWithinSpec, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision, $resultId]);
+                $stmt->execute([$value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision, $resultId]);
             } else {
                 // Create new result
                 $stmt = $db->prepare("
@@ -152,7 +153,7 @@ class TestResultController extends BaseController
                         uncertainty, k_factor, confidence_interval, replicate_count, revision)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
                 ");
-                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpec, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision]);
+                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision]);
                 $resultId = (int)$stmt->fetchColumn();
             }
 

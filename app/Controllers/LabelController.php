@@ -34,15 +34,20 @@ class LabelController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
 
+        $batchStmt = $db->prepare("SELECT * FROM batches WHERE id = ?");
+        $batchStmt->execute([$batchId]);
+        $batch = $batchStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$batch) { session_flash('error', 'Batch not found.'); redirect('/batches'); }
+
         $stmt = $db->prepare("
             SELECT s.*, p.product_name, c.customer_name
             FROM samples s
             LEFT JOIN products p ON s.product_id = p.id
             LEFT JOIN customers c ON s.customer_id = c.id
-            WHERE s.batch_id = ?
+            WHERE s.batch_id = ? OR s.batch_number = ?
             ORDER BY s.id
         ");
-        $stmt->execute([$batchId]);
+        $stmt->execute([$batchId, $batch['batch_number']]);
         $samples = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         if (empty($samples)) {

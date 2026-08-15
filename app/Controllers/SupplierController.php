@@ -62,7 +62,7 @@ class SupplierController extends BaseController
         $stmt->execute([$id]);
         $supplier = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$supplier) { session_flash('error', 'Supplier not found.'); $this->redirect('/suppliers'); }
-        $qualifications = $db->prepare("SELECT sq.*, u.full_name AS assessed_by_name FROM supplier_qualifications sq LEFT JOIN users u ON sq.assessed_by = u.id WHERE sq.supplier_id = ? ORDER BY sq.assessment_date DESC");
+        $qualifications = $db->prepare("SELECT sq.*, u.full_name AS assessed_by_name FROM supplier_qualifications sq LEFT JOIN users u ON sq.audited_by = u.id WHERE sq.supplier_id = ? ORDER BY sq.qualification_date DESC");
         $qualifications->execute([$id]);
         $products = $db->prepare("SELECT sp.*, p.product_code, p.product_name FROM supplier_products sp JOIN products p ON sp.product_id = p.id WHERE sp.supplier_id = ? ORDER BY p.product_name");
         $products->execute([$id]);
@@ -120,7 +120,7 @@ class SupplierController extends BaseController
         $stmt->execute([$id]);
         $supplier = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$supplier) { session_flash('error', 'Supplier not found.'); $this->redirect('/suppliers'); }
-        $quals = $db->prepare("SELECT sq.*, u.full_name AS assessed_by_name FROM supplier_qualifications sq LEFT JOIN users u ON sq.assessed_by = u.id WHERE sq.supplier_id = ? ORDER BY sq.assessment_date DESC");
+        $quals = $db->prepare("SELECT sq.*, u.full_name AS assessed_by_name FROM supplier_qualifications sq LEFT JOIN users u ON sq.audited_by = u.id WHERE sq.supplier_id = ? ORDER BY sq.qualification_date DESC");
         $quals->execute([$id]);
         return $this->render('suppliers.qualifications', [
             'supplier' => $supplier,

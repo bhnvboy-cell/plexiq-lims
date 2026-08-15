@@ -250,6 +250,24 @@ php bin/console instrument:scan
 
 `ImportInstrumentFile` and `WatchInstrumentDirectories` jobs run on the `imports` queue. Every import, assignment and workflow step is written to the audit trail.
 
+## Beta Testing
+
+The `beta/` directory contains demo-data seeding and automated HTTP test scripts used to validate every module end-to-end:
+
+| Script | Purpose |
+|--------|---------|
+| `beta/seed_beta_data.php` | Idempotent seeder that inserts ~100 customers, 200 samples, 60 batches, ~440 test assignments/results (incl. OOS, uncertainty), deviations, CAPA, ELN, environmental, suppliers, training, SPC/QC/stability, calibrations, CoC, billing, projects, compliance, i18n and e-signature data across every module. Re-run safely — it cleans up its own rows first. |
+| `beta/smoke_test.php` | Logs in as `admin` and walks 156 module pages (list/detail/create/edit incl. COA PDF, labels), reporting any non-200 response. |
+| `beta/role_test.php` | Logs in as analyst/reviewer/approver/customer and verifies each role's page access and permission boundaries (35 checks). |
+| `beta/workflow_test.php` | Runs a real cycle on a throwaway test: Analyst enters result → Reviewer approves → Approver final-approves, then cleans up. |
+
+```bash
+php beta/seed_beta_data.php   # load demo data (run from project root)
+php beta/smoke_test.php       # full admin page walk (expect: ALL ADMIN PAGES OK)
+php beta/role_test.php        # role/permission checks (expect: ALL ROLE CHECKS OK)
+php beta/workflow_test.php    # end-to-end approval cycle
+```
+
 ## Troubleshooting
 
 | Symptom | Cause & Fix |
