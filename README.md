@@ -9,6 +9,23 @@
 
 PlexiQ LIMS is a self-hosted, enterprise-grade Laboratory Information Management System designed for QC/QA laboratories. It provides complete sample lifecycle management, instrument integration, multi-stage approvals, and regulatory compliance (21 CFR Part 11, GDPR, HIPAA).
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/Screenshot_2026-07-05_185655.png" alt="Dashboard" width="100%"></td>
+    <td><img src="docs/screenshots/Screenshot_2026-08-13_205408.png" alt="Overview" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/Screenshot_2026-08-13_205443.png" alt="Module" width="100%"></td>
+    <td><img src="docs/screenshots/Screenshot_2026-08-13_205517.png" alt="Module" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/Screenshot_2026-08-13_205555.png" alt="Module" width="100%"></td>
+    <td><img src="docs/screenshots/Screenshot_2026-08-13_205633.png" alt="Module" width="100%"></td>
+  </tr>
+</table>
+
 ## Features
 
 **Sample & Batch Management**
