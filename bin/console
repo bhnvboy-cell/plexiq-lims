@@ -52,7 +52,41 @@ switch ($command) {
         break;
 
     case 'migrate':
-        $db = \App\Helpers\Database::connect();
+        try {
+            $db = \App\Helpers\Database::connect();
+        } catch (\PDOException $e) {
+            if (str_contains($e->getMessage(), 'does not exist')) {
+                $host = env('DB_HOST', '127.0.0.1');
+                $port = env('DB_PORT', '5432');
+                $dbname = env('DB_DATABASE', 'limsdb');
+                $user = env('DB_USERNAME', 'postgres');
+                $pass = env('DB_PASSWORD', '');
+                $adminPdo = new \PDO("pgsql:host={$host};port={$port};dbname=postgres", $user, $pass, [
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ]);
+                $safeDb = preg_replace('/[^a-zA-Z0-9_]/', '', $dbname);
+                $adminPdo->exec("CREATE DATABASE \"{$safeDb}\"");
+                echo "Created database: {$safeDb}\n";
+                \App\Helpers\Database::disconnect();
+                $db = \App\Helpers\Database::connect();
+                $schemaFile = __DIR__ . '/../database/schema.sql';
+                if (file_exists($schemaFile)) {
+                    $db->exec((string)file_get_contents($schemaFile));
+                    echo "Applied base schema: schema.sql\n";
+                }
+                $seedFile = __DIR__ . '/../database/seed_data.sql';
+                if (file_exists($seedFile)) {
+                    try {
+                        $db->exec((string)file_get_contents($seedFile));
+                        echo "Applied base seed data: seed_data.sql\n";
+                    } catch (\Throwable $se) {
+                        fwrite(STDERR, "Warning applying seed_data.sql: " . $se->getMessage() . "\n");
+                    }
+                }
+            } else {
+                throw $e;
+            }
+        }
         $migrationDir = __DIR__ . '/../database/migrations';
         $files = glob($migrationDir . '/*.sql') ?: [];
         sort($files);
