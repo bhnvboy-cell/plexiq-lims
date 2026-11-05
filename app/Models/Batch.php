@@ -50,7 +50,7 @@ class Batch extends BaseModel
         $batch['samples'] = $stmt2->fetchAll(\PDO::FETCH_ASSOC);
 
         // Get product tests with latest result per sample
-        $tests = ProductTest::findByProduct($batch['product_id']);
+        $tests = !empty($batch['product_id']) ? ProductTest::findByProduct((int)$batch['product_id']) : [];
         $batch['tests'] = $tests;
 
         return $batch;

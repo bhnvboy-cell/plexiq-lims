@@ -20,7 +20,7 @@ class Cache
         if (!is_file($path)) {
             return $default;
         }
-        $payload = @unserialize(@file_get_contents($path));
+        $payload = @unserialize(@file_get_contents($path), ['allowed_classes' => false]);
         if (!is_array($payload)) {
             return $default;
         }
@@ -138,7 +138,7 @@ class Cache
             return $default;
         }
         $value = $redis->get(self::redisKey($key));
-        return $value === false ? $default : unserialize($value);
+        return $value === false ? $default : unserialize($value, ['allowed_classes' => false]);
     }
 
     private static function redisPut(string $key, $value, int $ttl): void

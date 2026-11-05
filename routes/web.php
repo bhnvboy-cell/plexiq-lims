@@ -358,11 +358,12 @@ $router->post('/notebooks', [\App\Controllers\NotebookController::class, 'store'
 $router->get('/notebooks/{id}', [\App\Controllers\NotebookController::class, 'show'], ['auth']);
 $router->get('/notebooks/{id}/edit', [\App\Controllers\NotebookController::class, 'edit'], ['auth']);
 $router->post('/notebooks/{id}', [\App\Controllers\NotebookController::class, 'update'], ['auth']);
-$router->post('/notebooks/{id}/delete', [\App\Controllers\NotebookController::class, 'deleteEntry'], ['auth']);
+$router->post('/notebooks/{id}/delete', [\App\Controllers\NotebookController::class, 'deleteNotebook'], ['auth']);
 $router->get('/notebooks/{id}/entries/create', [\App\Controllers\NotebookController::class, 'createEntry'], ['auth']);
 $router->post('/notebooks/{id}/entries', [\App\Controllers\NotebookController::class, 'storeEntry'], ['auth']);
-$router->get('/entries/{id}/edit', [\App\Controllers\NotebookController::class, 'editEntry'], ['auth']);
+$router->get('/entries/{id}/edit', [\App\Controllers\NotebookController::class, 'edit'], ['auth']);
 $router->post('/entries/{id}', [\App\Controllers\NotebookController::class, 'updateEntry'], ['auth']);
+$router->post('/entries/{id}/delete', [\App\Controllers\NotebookController::class, 'deleteEntry'], ['auth']);
 
 // ============================================================
 // NOTIFICATIONS
@@ -404,7 +405,12 @@ $router->get('/esign/audit', [\App\Controllers\ESignatureController::class, 'aud
 // SSO / LDAP / AUTHENTICATION
 // ============================================================
 $router->get('/sso', [\App\Controllers\SsoController::class, 'index'], ['auth']);
+$router->post('/sso/config/saml', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
+$router->post('/sso/config/ldap', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
+$router->post('/sso/config/oauth', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
+$router->post('/sso/config/ldap/test', [\App\Controllers\SsoController::class, 'testConnection'], ['auth']);
 $router->post('/sso/config/{id}', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
+$router->post('/sso/config/{id}/test', [\App\Controllers\SsoController::class, 'testConnection'], ['auth']);
 $router->post('/sso/test/{id}', [\App\Controllers\SsoController::class, 'testConnection'], ['auth']);
 
 // ============================================================
@@ -447,8 +453,10 @@ $router->post('/compliance/anonymize/{userId}', [\App\Controllers\ComplianceCont
 // BI ANALYTICS & REPORTS
 // ============================================================
 $router->get('/bi', [\App\Controllers\BiAnalyticsController::class, 'index'], ['auth']);
-$router->post('/bi/reports', [\App\Controllers\BiAnalyticsController::class, 'createReport'], ['auth']);
+$router->get('/bi/reports/create', [\App\Controllers\BiAnalyticsController::class, 'createReport'], ['auth']);
+$router->post('/bi/reports', [\App\Controllers\BiAnalyticsController::class, 'storeReport'], ['auth']);
 $router->get('/bi/reports/{id}/edit', [\App\Controllers\BiAnalyticsController::class, 'editReport'], ['auth']);
+$router->post('/bi/reports/{id}', [\App\Controllers\BiAnalyticsController::class, 'updateReport'], ['auth']);
 $router->post('/bi/reports/{id}/run', [\App\Controllers\BiAnalyticsController::class, 'runReport'], ['auth']);
 $router->get('/bi/connections', [\App\Controllers\BiAnalyticsController::class, 'biConnections'], ['auth']);
 $router->post('/bi/connections/test/{id}', [\App\Controllers\BiAnalyticsController::class, 'testConnection'], ['auth']);
@@ -527,7 +535,8 @@ $router->get('/calibrations/standards/{id}/edit', [\App\Controllers\CalibrationE
 $router->post('/calibrations/standards', [\App\Controllers\CalibrationEnhancedController::class, 'storeStandard'], ['auth']);
 $router->post('/calibrations/standards/{id}', [\App\Controllers\CalibrationEnhancedController::class, 'updateStandard'], ['auth']);
 $router->get('/calibrations/schedules', [\App\Controllers\CalibrationEnhancedController::class, 'schedules'], ['auth']);
-$router->post('/calibrations/schedules', [\App\Controllers\CalibrationEnhancedController::class, 'createSchedule'], ['auth']);
+$router->get('/calibrations/schedules/create', [\App\Controllers\CalibrationEnhancedController::class, 'createSchedule'], ['auth']);
+$router->post('/calibrations/schedules', [\App\Controllers\CalibrationEnhancedController::class, 'storeSchedule'], ['auth']);
 $router->get('/calibrations/records/{instrumentId}', [\App\Controllers\CalibrationEnhancedController::class, 'records'], ['auth']);
 $router->post('/calibrations/records', [\App\Controllers\CalibrationEnhancedController::class, 'addRecord'], ['auth']);
 $router->get('/calibrations/overdue', [\App\Controllers\CalibrationEnhancedController::class, 'getOverdue'], ['auth']);
@@ -581,7 +590,3 @@ $router->post('/stability/timepoints/{id}/start', [\App\Controllers\StabilityCon
 $router->post('/stability/timepoints/{id}/complete', [\App\Controllers\StabilityController::class, 'completeTimepoint'], ['auth']);
 $router->get('/stability/results/{id}', [\App\Controllers\StabilityController::class, 'showResult'], ['auth']);
 $router->post('/suppliers/{id}/qualifications/{qid}', [\App\Controllers\SupplierController::class, 'deleteQualification'], ['auth']);
-$router->post('/sso/config/saml', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
-$router->post('/sso/config/ldap', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
-$router->post('/sso/config/oauth', [\App\Controllers\SsoController::class, 'updateConfig'], ['auth']);
-$router->post('/sso/config/ldap/test', [\App\Controllers\SsoController::class, 'testConnection'], ['auth']);

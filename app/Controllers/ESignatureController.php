@@ -26,42 +26,49 @@ class ESignatureController extends BaseController
             return '';
         }
 
-        $actionType = $_POST['signature_type'] ?? 'approval';
+        $meaning = $_POST['meaning'] ?? $_POST['signature_type'] ?? $_POST['action_type'] ?? 'approval';
         $reason = $_POST['reason'] ?? 'Approved';
+        $userId = Auth::id();
+        $timestamp = gmdate('c');
 
         $db = \App\Helpers\Database::connect();
 
         // Snapshot the current entity state so the signature is bound to content.
         $signedData = $this->captureEntityState($db, $entityType, $entityId);
 
-        // Cryptographic binding: hash of the signed content + user + reason + timestamp.
-        $payload = json_encode([
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'user_id' => Auth::id(),
-            'action_type' => $actionType,
+        // Cryptographic binding: SHA-256 hash over entity, user, meaning, reason, timestamp + entity snapshot.
+        $signatureHash = hash('sha256', json_encode([$entityType, $entityId, $userId, $meaning, $reason, $timestamp]) . json_encode($signedData));
+        $signedDataPayload = json_encode([
+            'signed_data' => $signedData,
+            'meaning' => $meaning,
             'reason' => $reason,
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-            'content_hash' => hash('sha256', json_encode($signedData)),
-            'signed_at' => gmdate('c'),
+            'signed_at' => $timestamp,
         ]);
-        $signatureHash = hash('sha256', $payload);
 
-        $db->prepare("INSERT INTO electronic_signatures (user_id, action_type, entity_type, entity_id, signature_hash, signed_data, ip_address) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)")->execute([
-            Auth::id(),
-            $actionType,
-            $entityType,
-            $entityId,
-            $signatureHash,
-            json_encode([
-                'signed_data' => $signedData,
-                'reason' => $reason,
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-                'signed_at' => gmdate('c'),
-            ]),
-            $_SERVER['REMOTE_ADDR'] ?? '',
-        ]);
+        try {
+            $db->prepare("INSERT INTO electronic_signatures (user_id, entity_type, entity_id, meaning, reason, signature_hash, signed_data, ip_address, signed_at) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)")->execute([
+                $userId,
+                $entityType,
+                $entityId,
+                $meaning,
+                $reason,
+                $signatureHash,
+                $signedDataPayload,
+                $_SERVER['REMOTE_ADDR'] ?? '',
+                $timestamp,
+            ]);
+        } catch (\Throwable) {
+            $db->prepare("INSERT INTO electronic_signatures (user_id, action_type, entity_type, entity_id, signature_hash, signed_data, ip_address) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)")->execute([
+                $userId,
+                $meaning,
+                $entityType,
+                $entityId,
+                $signatureHash,
+                $signedDataPayload,
+                $_SERVER['REMOTE_ADDR'] ?? '',
+            ]);
+        }
         $sigId = $db->lastInsertId();
         Audit::log('E-Signature Recorded', 'electronic_signatures', (int)$sigId, null, ['entity_type' => $entityType, 'entity_id' => $entityId, 'signature_hash' => $signatureHash]);
         session_flash('success', 'Electronic signature recorded.');
@@ -87,19 +94,19 @@ class ESignatureController extends BaseController
 
         // Recompute the signature hash from stored data to detect tampering.
         $stored = json_decode($sig['signed_data'] ?? '{}', true) ?: [];
-        $signedData = $stored['signed_data'] ?? [];
-        $contentHash = hash('sha256', json_encode($signedData));
+        $signedData = $stored['signed_data'] ?? $stored;
+        $meaning = $sig['meaning'] ?? $sig['action_type'] ?? $stored['meaning'] ?? 'approval';
+        $reason = $sig['reason'] ?? $stored['reason'] ?? '';
+        $timestamp = $stored['signed_at'] ?? $sig['signed_at'] ?? '';
+
         $recomputed = hash('sha256', json_encode([
-            'entity_type' => $sig['entity_type'],
-            'entity_id' => $sig['entity_id'],
-            'user_id' => $sig['user_id'],
-            'action_type' => $sig['action_type'],
-            'reason' => $stored['reason'] ?? '',
-            'ip_address' => $sig['ip_address'],
-            'user_agent' => $stored['user_agent'] ?? '',
-            'content_hash' => $contentHash,
-            'signed_at' => $stored['signed_at'] ?? '',
-        ]));
+            $sig['entity_type'],
+            (int)$sig['entity_id'],
+            (int)$sig['user_id'],
+            $meaning,
+            $reason,
+            $timestamp,
+        ]) . json_encode($signedData));
 
         $sig['verification_status'] = hash_equals($sig['signature_hash'], $recomputed)
             ? 'Valid - signature hash matches'

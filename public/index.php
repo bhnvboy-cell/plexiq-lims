@@ -66,17 +66,24 @@ $uri = $_SERVER['REQUEST_URI'];
 // Only strip when this request was routed through the front controller; for the
 // built-in dev server, static-looking URLs (e.g. /backups/download/x.sql) report
 // SCRIPT_NAME as the requested URI itself, which must not be treated as a prefix.
-$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-$scriptDir = dirname($scriptName);
-if ($scriptDir !== '/' && $scriptDir !== '\\' && basename($scriptName) === 'index.php') {
-    $uri = '/' . ltrim(substr($uri, strlen($scriptDir)), '/');
-    $uri = $uri ?: '/';
+$scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+$scriptDir = rtrim(dirname($scriptName), '/');
+if ($scriptDir !== '' && $scriptDir !== '.' && basename($scriptName) === 'index.php') {
+    if (str_starts_with($uri, $scriptDir . '/') || $uri === $scriptDir || str_starts_with($uri, $scriptDir . '?')) {
+        $uri = substr($uri, strlen($scriptDir));
+    } elseif (str_ends_with($scriptDir, '/public')) {
+        $parentDir = rtrim(dirname($scriptDir), '/');
+        if ($parentDir !== '' && $parentDir !== '.' && (str_starts_with($uri, $parentDir . '/') || $uri === $parentDir || str_starts_with($uri, $parentDir . '?'))) {
+            $uri = substr($uri, strlen($parentDir));
+        }
+    }
+    $uri = '/' . ltrim($uri, '/');
 }
 
 // Handle CORS for API
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token, X-Requested-With');
 
 if ($method === 'OPTIONS') {
     http_response_code(200);

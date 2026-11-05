@@ -44,8 +44,28 @@ if (file_exists($envFile)) {
 }
 
 // Initialize session for CLI testing
+$sessionDir = BASE_PATH . '/storage/sessions';
+if (!is_dir($sessionDir)) {
+    @mkdir($sessionDir, 0775, true);
+}
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    session_save_path($sessionDir);
+    @session_start();
+}
+
+// Autoload Tests\ namespace if not already registered
+spl_autoload_register(function (string $class): void {
+    if (str_starts_with($class, 'Tests\\')) {
+        $relative = str_replace('\\', '/', substr($class, strlen('Tests\\')));
+        $file = TESTS_PATH . '/' . $relative . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+        }
+    }
+});
+
+if (file_exists(TESTS_PATH . '/TestCase.php')) {
+    require_once TESTS_PATH . '/TestCase.php';
 }
 
 // Set testing flag

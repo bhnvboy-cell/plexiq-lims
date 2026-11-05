@@ -10,13 +10,13 @@ class Language extends BaseModel
 
     public static function getActive(): array
     {
-        return static::where('is_active', 1);
+        return static::where('is_active', 't');
     }
 
     public static function getDefault(): ?array
     {
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->query("SELECT * FROM " . static::$table . " WHERE is_default = 1 LIMIT 1");
+        $stmt = $db->query("SELECT * FROM " . static::$table . " WHERE is_default = TRUE LIMIT 1");
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $result ?: null;
     }

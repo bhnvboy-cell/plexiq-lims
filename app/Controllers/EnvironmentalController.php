@@ -55,9 +55,9 @@ class EnvironmentalController extends BaseController
             $_POST['location_name'],
             $_POST['monitoring_type'] ?? 'Temperature',
             $_POST['unit'] ?? '°C',
-            $_POST['min_threshold'] ?: null,
-            $_POST['max_threshold'] ?: null,
-            !empty($_POST['is_active']),
+            ($_POST['min_threshold'] ?? '') !== '' ? $_POST['min_threshold'] : null,
+            ($_POST['max_threshold'] ?? '') !== '' ? $_POST['max_threshold'] : null,
+            !empty($_POST['is_active']) ? 't' : 'f',
         ]);
         $pointId = $db->lastInsertId();
         Audit::log('Environmental Point Created', 'environmental_points', $pointId);

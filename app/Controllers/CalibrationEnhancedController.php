@@ -103,9 +103,9 @@ class CalibrationEnhancedController extends BaseController
             $_POST['standard_type'] ?? 'Reference',
             $_POST['serial_number'] ?? null,
             $_POST['certificate_number'] ?? null,
-            $_POST['calibration_interval_days'] ?: null,
-            $_POST['last_calibration_date'] ?? null,
-            $_POST['next_calibration_date'] ?? null,
+            ($_POST['calibration_interval_days'] ?? '') ?: null,
+            ($_POST['last_calibration_date'] ?? '') ?: null,
+            ($_POST['next_calibration_date'] ?? '') ?: null,
             $_POST['notes'] ?? null,
         ]);
         $stdId = $db->lastInsertId();
@@ -124,9 +124,9 @@ class CalibrationEnhancedController extends BaseController
             $_POST['standard_type'] ?? 'Reference',
             $_POST['serial_number'] ?? null,
             $_POST['certificate_number'] ?? null,
-            $_POST['calibration_interval_days'] ?: null,
-            $_POST['last_calibration_date'] ?? null,
-            $_POST['next_calibration_date'] ?? null,
+            ($_POST['calibration_interval_days'] ?? '') ?: null,
+            ($_POST['last_calibration_date'] ?? '') ?: null,
+            ($_POST['next_calibration_date'] ?? '') ?: null,
             $_POST['notes'] ?? null,
             $id,
         ]);
@@ -174,11 +174,11 @@ class CalibrationEnhancedController extends BaseController
         $db = \App\Helpers\Database::connect();
         $db->prepare("INSERT INTO calibration_schedules (instrument_id, standard_id, frequency_days, last_due_date, next_due_date, assigned_to) VALUES (?, ?, ?, ?, ?, ?)")->execute([
             $_POST['instrument_id'],
-            $_POST['standard_id'] ?: null,
-            $_POST['frequency_days'] ?? 365,
-            $_POST['last_due_date'] ?? null,
-            $_POST['next_due_date'] ?? null,
-            $_POST['assigned_to'] ?: null,
+            ($_POST['standard_id'] ?? '') ?: null,
+            ($_POST['frequency_days'] ?? '') ?: 365,
+            ($_POST['last_due_date'] ?? '') ?: null,
+            ($_POST['next_due_date'] ?? '') ?: null,
+            ($_POST['assigned_to'] ?? '') ?: null,
         ]);
         Audit::log('Calibration Schedule Created', 'calibration_schedules', null, null, ['instrument_id' => $_POST['instrument_id']]);
         session_flash('success', 'Schedule created.');
@@ -211,24 +211,31 @@ class CalibrationEnhancedController extends BaseController
         ]);
     }
 
+    public function storeRecord(): void
+    {
+        $this->addRecord();
+    }
+
     public function addRecord(): void
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
+        $calibratedBy = is_numeric($_POST['calibrated_by'] ?? '') ? (int)$_POST['calibrated_by'] : Auth::id();
+        $nextCalDate = ($_POST['next_calibration_date'] ?? '') ?: null;
         $db->prepare("INSERT INTO calibration_records (instrument_id, calibration_date, calibrated_by, standard_id, result, certificate_number, next_calibration_date, notes, performed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
             $_POST['instrument_id'],
             $_POST['calibration_date'],
-            $_POST['calibrated_by'] ?? null,
-            $_POST['standard_id'] ?: null,
+            $calibratedBy,
+            ($_POST['standard_id'] ?? '') ?: null,
             $_POST['result'] ?? 'Pass',
             $_POST['certificate_number'] ?? null,
-            $_POST['next_calibration_date'] ?? null,
+            $nextCalDate,
             $_POST['notes'] ?? null,
             Auth::id(),
         ]);
         $db->prepare("UPDATE instruments SET last_calibration_date = ?, next_calibration_date = ? WHERE id = ?")->execute([
             $_POST['calibration_date'],
-            $_POST['next_calibration_date'] ?? null,
+            $nextCalDate,
             $_POST['instrument_id'],
         ]);
         Audit::log('Calibration Record Added', 'calibration_records', null, null, ['instrument_id' => $_POST['instrument_id']]);

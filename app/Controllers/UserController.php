@@ -49,7 +49,7 @@ class UserController extends BaseController
             $hash,
             $_POST['full_name'],
             $_POST['role_id'],
-            isset($_POST['is_active']) ? true : false,
+            isset($_POST['is_active']) ? 't' : 'f',
         ]);
 
         $userId = (int)$db->lastInsertId();
@@ -73,7 +73,7 @@ class UserController extends BaseController
         $db = \App\Helpers\Database::connect();
 
         $sql = "UPDATE users SET username = ?, email = ?, full_name = ?, role_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP";
-        $params = [$_POST['username'], $_POST['email'], $_POST['full_name'], $_POST['role_id'], isset($_POST['is_active']) ? true : false];
+        $params = [$_POST['username'], $_POST['email'], $_POST['full_name'], $_POST['role_id'], isset($_POST['is_active']) ? 't' : 'f'];
 
         if (!empty($_POST['password'])) {
             $sql .= ", password_hash = ?";

@@ -6,5 +6,5 @@ use App\BaseModel;
 
 class DataPrivacyLog extends BaseModel
 {
-    protected static string $table = 'data_privacy_logs';
+    protected static string $table = 'privacy_logs';
 }

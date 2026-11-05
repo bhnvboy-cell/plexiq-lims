@@ -17,14 +17,14 @@ class TrainingAssignment extends BaseModel
     {
         $db = \App\Helpers\Database::connect();
         $cutoff = $days > 0
-            ? date('Y-m-d H:i:s', strtotime("-{$days} days"))
-            : date('Y-m-d H:i:s');
+            ? date('Y-m-d', strtotime("-{$days} days"))
+            : date('Y-m-d');
 
         $stmt = $db->prepare("
             SELECT * FROM " . static::$table . "
             WHERE due_date IS NOT NULL
               AND due_date < ?
-              AND completed_at IS NULL
+              AND completed_date IS NULL
             ORDER BY due_date ASC
         ");
         $stmt->execute([$cutoff]);

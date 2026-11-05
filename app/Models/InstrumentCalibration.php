@@ -20,7 +20,7 @@ class InstrumentCalibration extends BaseModel
     public static function upcomingCalibrations(int $days = 30): array
     {
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT ic.*, i.instrument_name, i.instrument_code FROM instrument_calibrations ic JOIN instruments i ON ic.instrument_id = i.id WHERE ic.next_calibration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '? days' ORDER BY ic.next_calibration_date");
+        $stmt = $db->prepare("SELECT ic.*, i.instrument_name, i.instrument_code FROM instrument_calibrations ic JOIN instruments i ON ic.instrument_id = i.id WHERE ic.next_calibration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + (? || ' days')::interval ORDER BY ic.next_calibration_date");
         $stmt->execute([$days]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }

@@ -16,7 +16,7 @@ class Notification extends BaseModel
             'title' => $title,
             'message' => $message,
             'link' => $link,
-            'is_read' => 0,
+            'is_read' => 'f',
             'sent_at' => date('Y-m-d H:i:s'),
         ]);
 

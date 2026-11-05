@@ -49,6 +49,7 @@ class DeliverWebhook extends Job
         ]);
         $responseBody = curl_exec($ch);
         $responseCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $curlErrno = curl_errno($ch);
         $curlError = curl_error($ch);
         curl_close($ch);
 
@@ -72,5 +73,11 @@ class DeliverWebhook extends Job
             'event' => $event,
             'status' => $responseCode,
         ]);
+
+        if ($curlErrno !== 0 || $responseCode < 200 || $responseCode >= 300) {
+            throw new \RuntimeException(
+                "Webhook delivery failed (HTTP {$responseCode})" . ($curlError !== '' ? ": {$curlError}" : '')
+            );
+        }
     }
 }

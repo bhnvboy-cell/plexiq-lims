@@ -8,7 +8,6 @@ echo.
 echo Starting PHP server at http://localhost:8080
 echo.
 echo Open browser to: http://localhost:8080
-echo Login: admin / admin@123
 echo.
 echo Press Ctrl+C to stop the server.
 echo.

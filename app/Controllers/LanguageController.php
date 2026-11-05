@@ -49,6 +49,7 @@ class LanguageController extends BaseController
         $stmt->execute([$code]);
         $lang = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($lang) {
+            $_SESSION['_lang'] = $code;
             $_SESSION['lang'] = $code;
         }
         $this->back();
@@ -83,19 +84,29 @@ class LanguageController extends BaseController
         $this->redirect('/languages');
     }
 
-    public function export(): void
+    public function export(?string $id = null): void
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $langCode = $_GET['lang'] ?? null;
+        $langCode = $_GET['lang'] ?? $id ?? 'en';
         if ($langCode) {
-            $stmt = $db->prepare("
-                SELECT t.translation_key, t.translation_value, t.module
-                FROM translations t
-                JOIN languages l ON t.language_id = l.id
-                WHERE l.language_code = ?
-            ");
-            $stmt->execute([$langCode]);
+            if (ctype_digit((string)$langCode)) {
+                $stmt = $db->prepare("
+                    SELECT t.translation_key, t.translation_value, t.module
+                    FROM translations t
+                    JOIN languages l ON t.language_id = l.id
+                    WHERE l.id = ?
+                ");
+                $stmt->execute([(int)$langCode]);
+            } else {
+                $stmt = $db->prepare("
+                    SELECT t.translation_key, t.translation_value, t.module
+                    FROM translations t
+                    JOIN languages l ON t.language_id = l.id
+                    WHERE l.language_code = ?
+                ");
+                $stmt->execute([$langCode]);
+            }
         } else {
             $stmt = $db->query("
                 SELECT t.translation_key, t.translation_value, t.module, l.language_code

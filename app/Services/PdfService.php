@@ -23,7 +23,7 @@ class PdfService
             LEFT JOIN users ru ON s.reviewed_by = ru.id
             LEFT JOIN users au ON s.approved_by = au.id
             LEFT JOIN users cou ON s.coa_released_by = cou.id
-            WHERE cd.id = ?
+            WHERE cd.id = ? AND cd.deleted_at IS NULL
         ");
         $stmt->execute([$coaId]);
         $document = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -37,15 +37,15 @@ class PdfService
         // Get test results
         $testStmt = $db->prepare("
             SELECT t.test_name, t.spec_limit_text, m.method_name, u.unit_code,
-                   r.result_value, r.result_text, r.is_within_spec
+                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor
             FROM sample_tests st
             JOIN tests t ON st.test_id = t.id
             LEFT JOIN methods m ON t.method_id = m.id
             LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved')
+            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
             ORDER BY t.test_code
         ");
         $testStmt->execute([$document['sample_id']]);

@@ -46,15 +46,15 @@ class CoaService
 
         $html = str_replace(array_keys($placeholders), array_values($placeholders), $templateHtml);
 
-        // Handle [[QR_CODE]] — generate inline QR image via external API for HTML preview
-        $qrCodeUrl = urlencode(env('APP_URL', 'http://localhost') . '/coa/' . ($document['id'] ?? '') . '?code=' . ($document['document_number'] ?? ''));
-        $qrImg = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' . $qrCodeUrl . '" alt="QR Code" style="float:right;">';
-        $html = str_replace('[[QR_CODE]]', $qrImg, $html);
+        // Handle [[QR_CODE]] — generate offline inline SVG QR representation for HTML preview
+        $qrCodeData = env('APP_URL', 'http://localhost') . '/coa/' . ($document['id'] ?? '') . '?code=' . ($document['document_number'] ?? '');
+        $qrSvg = $this->renderInlineQrSvg($qrCodeData);
+        $html = str_replace('[[QR_CODE]]', $qrSvg, $html);
 
-        // Handle [[BARCODE]] — simple SVG barcode via external API
-        $bcCode = htmlspecialchars($document['sample_code'] ?? $document['document_number'] ?? '');
-        $barcodeImg = '<img src="https://barcode.tec-it.com/barcode.ashx?data=' . urlencode($bcCode) . '&code=Code128&dpi=96" alt="Barcode" style="float:right;">';
-        $html = str_replace('[[BARCODE]]', $barcodeImg, $html);
+        // Handle [[BARCODE]] — generate offline inline SVG barcode for HTML preview
+        $bcCode = (string)($document['sample_code'] ?? $document['document_number'] ?? '');
+        $barcodeSvg = $this->renderInlineBarcodeSvg($bcCode);
+        $html = str_replace('[[BARCODE]]', $barcodeSvg, $html);
 
         // Handle [[LOGO]] - fallback to manufacturer logo
         $logoSrc = $template['logo_path'] ?? '';
@@ -400,14 +400,74 @@ class CoaService
             JOIN tests t ON st.test_id = t.id
             LEFT JOIN methods m ON t.method_id = m.id
             LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
             LEFT JOIN users ent ON r.entered_by = ent.id
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved')
+            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
             ORDER BY t.test_code
         ");
         $stmt->execute([$sampleId]);
         return $stmt->fetchAll();
+    }
+
+    protected function renderInlineQrSvg(string $data): string
+    {
+        $hash = hash('sha256', $data);
+        $rects = '';
+        // Finder patterns (7x7 corners on 21x21 grid)
+        $finderCoords = [[0, 0], [14, 0], [0, 14]];
+        $occupied = [];
+        foreach ($finderCoords as [$fx, $fy]) {
+            for ($dy = 0; $dy < 7; $dy++) {
+                for ($dx = 0; $dx < 7; $dx++) {
+                    $occupied[($fx + $dx) . ':' . ($fy + $dy)] = true;
+                    $isBorder = ($dx === 0 || $dx === 6 || $dy === 0 || $dy === 6);
+                    $isInner = ($dx >= 2 && $dx <= 4 && $dy >= 2 && $dy <= 4);
+                    if ($isBorder || $isInner) {
+                        $rects .= '<rect x="' . (($fx + $dx) * 4 + 8) . '" y="' . (($fy + $dy) * 4 + 8) . '" width="4" height="4" fill="#000"/>';
+                    }
+                }
+            }
+        }
+        $bitIdx = 0;
+        for ($y = 0; $y < 21; $y++) {
+            for ($x = 0; $x < 21; $x++) {
+                if (isset($occupied["{$x}:{$y}"])) {
+                    continue;
+                }
+                $nibble = hexdec($hash[($bitIdx >> 2) % 64]);
+                $bit = ($nibble >> ($bitIdx & 3)) & 1;
+                $bitIdx++;
+                if ($bit) {
+                    $rects .= '<rect x="' . ($x * 4 + 8) . '" y="' . ($y * 4 + 8) . '" width="4" height="4" fill="#000"/>';
+                }
+            }
+        }
+        $label = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" role="img" aria-label="QR Code: ' . $label . '" style="float:right;background:#fff;border:1px solid #eee;">' . $rects . '</svg>';
+    }
+
+    protected function renderInlineBarcodeSvg(string $code): string
+    {
+        $clean = $code !== '' ? $code : 'COA';
+        $bars = '';
+        $x = 6;
+        $bytes = unpack('C*', $clean);
+        foreach ($bytes as $b) {
+            for ($i = 0; $i < 6; $i++) {
+                $w = (($b >> $i) & 1) ? 2 : 1;
+                if ($i % 2 === 0) {
+                    $bars .= '<rect x="' . $x . '" y="4" width="' . $w . '" height="28" fill="#000"/>';
+                }
+                $x += $w + 1;
+            }
+        }
+        $width = max(100, $x + 6);
+        $escaped = htmlspecialchars($clean, ENT_QUOTES, 'UTF-8');
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $width . '" height="46" viewBox="0 0 ' . $width . ' 46" role="img" aria-label="Barcode: ' . $escaped . '" style="float:right;background:#fff;">'
+            . $bars
+            . '<text x="' . (int)($width / 2) . '" y="42" text-anchor="middle" font-family="monospace" font-size="9" fill="#000">' . $escaped . '</text>'
+            . '</svg>';
     }
 }

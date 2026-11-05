@@ -47,9 +47,9 @@ class OosController extends BaseController
         Auth::requireAnyRole(['Admin', 'Analyst']);
         $result = OosRecord::create([
             'oos_number' => $_POST['oos_number'],
-            'sample_id' => $_POST['sample_id'] ?: null,
-            'sample_test_id' => $_POST['sample_test_id'] ?? null,
-            'result_id' => $_POST['result_id'] ?? null,
+            'sample_id' => ($_POST['sample_id'] ?? '') ?: null,
+            'sample_test_id' => ($_POST['sample_test_id'] ?? '') ?: null,
+            'result_id' => ($_POST['result_id'] ?? '') ?: null,
             'test_parameter' => $_POST['test_parameter'] ?: null,
             'specification_range' => $_POST['specification_range'] ?: null,
             'result_value' => isset($_POST['result_value']) && $_POST['result_value'] !== '' ? (float)$_POST['result_value'] : null,
@@ -58,7 +58,7 @@ class OosController extends BaseController
             'description' => $_POST['description'],
             'severity' => $_POST['severity'] ?? 'Minor',
             'initiated_by' => Auth::id(),
-            'assigned_to' => $_POST['assigned_to'] ?: null,
+            'assigned_to' => ($_POST['assigned_to'] ?? '') ?: null,
         ]);
         $id = $result['id'] ?? null;
         Audit::log('OOS Record Created', 'oos_records', $id);

@@ -108,13 +108,10 @@ if ($c !== 302) { $fail[] = "result save POST got $c expected 302"; }
 // Verify result saved
 $res = $db->query("SELECT id, result_value FROM results WHERE sample_test_id = $stId")->fetch(\PDO::FETCH_ASSOC);
 if (!$res) { $fail[] = "result not saved in DB"; } else { echo "  DB result: id={$res['id']} value={$res['result_value']}\n"; }
-// Verify status now In Progress / Completed
+// Verify status now Completed automatically
 $st = $db->query("SELECT status FROM sample_tests WHERE id = $stId")->fetchColumn();
 echo "  sample_test status after save => $st\n";
-
-// Mark test Completed if needed (analyst save flow usually sets In Progress; completed set via separate action)
-$db->prepare("UPDATE sample_tests SET status='Completed', completed_at=CURRENT_TIMESTAMP WHERE id=?")->execute([$stId]);
-echo "  forced status -> Completed\n";
+if ($st !== 'Completed') { $fail[] = "expected Completed after analyst save, got $st"; }
 
 // ===== 2. Reviewer approves =====
 echo "\n--- Reviewer: approve ---\n";

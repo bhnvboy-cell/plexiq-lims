@@ -35,7 +35,7 @@ class ProjectController extends BaseController
     public function store(): void
     {
         Auth::requireRole('Admin');
-        $id = Project::create([
+        $created = Project::create([
             'project_code' => $_POST['project_code'],
             'project_name' => $_POST['project_name'],
             'description' => $_POST['description'] ?: null,
@@ -46,9 +46,10 @@ class ProjectController extends BaseController
             'manager_id' => $_POST['manager_id'] ?: null,
             'created_by' => Auth::id(),
         ]);
-        Audit::log('Project Created', 'projects', $id);
+        $id = is_array($created) ? (int)($created['id'] ?? 0) : (int)$created;
+        Audit::log('Project Created', 'projects', $id ?: null);
         session_flash('success', 'Project created successfully.');
-        redirect('/projects/' . $id);
+        redirect($id ? ('/projects/' . $id) : '/projects');
     }
 
     public function edit(int $id): string

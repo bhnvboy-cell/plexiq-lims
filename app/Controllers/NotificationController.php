@@ -97,13 +97,13 @@ class NotificationController extends BaseController
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
         $db->prepare("UPDATE notification_settings SET email_notifications = ?, browser_notifications = ?, digest_frequency = ?, notify_on_sample_status = ?, notify_on_result_entry = ?, notify_on_certificate = ?, notify_on_deviation = ?, quiet_hours_start = ?, quiet_hours_end = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?")->execute([
-            !empty($_POST['email_notifications']),
-            !empty($_POST['browser_notifications']),
+            !empty($_POST['email_notifications']) ? 't' : 'f',
+            !empty($_POST['browser_notifications']) ? 't' : 'f',
             $_POST['digest_frequency'] ?? 'daily',
-            !empty($_POST['notify_on_sample_status']),
-            !empty($_POST['notify_on_result_entry']),
-            !empty($_POST['notify_on_certificate']),
-            !empty($_POST['notify_on_deviation']),
+            !empty($_POST['notify_on_sample_status']) ? 't' : 'f',
+            !empty($_POST['notify_on_result_entry']) ? 't' : 'f',
+            !empty($_POST['notify_on_certificate']) ? 't' : 'f',
+            !empty($_POST['notify_on_deviation']) ? 't' : 'f',
             $_POST['quiet_hours_start'] ?: null,
             $_POST['quiet_hours_end'] ?: null,
             Auth::id(),

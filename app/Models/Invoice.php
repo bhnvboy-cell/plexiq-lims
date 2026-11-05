@@ -22,12 +22,17 @@ class Invoice extends BaseModel
     {
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
-            SELECT COALESCE(SUM(total), 0) as total,
-                   COALESCE(SUM(paid), 0) as paid,
-                   COALESCE(SUM(balance), 0) as balance
-            FROM " . static::$table . "
-            WHERE EXTRACT(YEAR FROM issued_at) = ?
-              AND EXTRACT(MONTH FROM issued_at) = ?
+            SELECT COALESCE(SUM(i.total_amount), 0) AS total,
+                   COALESCE(SUM(p.paid_amount), 0) AS paid,
+                   COALESCE(SUM(i.total_amount - COALESCE(p.paid_amount, 0)), 0) AS balance
+            FROM " . static::$table . " i
+            LEFT JOIN (
+                SELECT invoice_id, SUM(amount) AS paid_amount
+                FROM payments
+                GROUP BY invoice_id
+            ) p ON p.invoice_id = i.id
+            WHERE EXTRACT(YEAR FROM i.invoice_date) = ?
+              AND EXTRACT(MONTH FROM i.invoice_date) = ?
         ");
         $stmt->execute([$year, $month]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);

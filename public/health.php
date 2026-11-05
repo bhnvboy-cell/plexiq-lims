@@ -5,11 +5,24 @@
  */
 header('Content-Type: application/json');
 
+// Load .env if DB_HOST is not already in environment
+if (!getenv('DB_HOST')) {
+    $envFile = __DIR__ . '/../.env';
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (str_starts_with(trim($line), '#') || !str_contains($line, '=')) continue;
+            [$key, $value] = explode('=', $line, 2);
+            $_ENV[trim($key)] = trim($value);
+            putenv(trim($key) . '=' . trim($value));
+        }
+    }
+}
+
 $health = [
     'status' => 'ok',
     'timestamp' => date('c'),
     'application' => 'PlexiQ LIMS',
-    'php_version' => PHP_VERSION,
 ];
 
 // Check database connectivity if env is set
@@ -26,12 +39,11 @@ if ($dbHost) {
         $pdo->query('SELECT 1');
         $health['database'] = 'connected';
     } catch (\Exception $e) {
+        error_log('Health check DB error: ' . $e->getMessage());
         http_response_code(503);
         $health['status'] = 'degraded';
-        $health['database'] = 'error: ' . $e->getMessage();
+        $health['database'] = 'error';
     }
 }
-
-$health['memory_usage'] = round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB';
 
 echo json_encode($health, JSON_PRETTY_PRINT);

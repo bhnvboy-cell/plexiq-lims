@@ -1,9 +1,27 @@
 RewriteEngine On
 RewriteBase /plexiq/
 
-# If the request is for a real file or directory, serve it directly
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+# Block direct access to sensitive files and directories
+<FilesMatch "^(\.env.*|composer\.(json|lock)|phpunit\.xml.*|.*\.sql|.*\.log|.*\.bat|.*\.sh)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+RewriteRule ^(\.git|\.env|composer\.|phpunit|storage|database|app|config|routes|tests|beta|bin|vendor|resources|docker)(/|$) - [F,L]
+
+# Serve existing static files in public/
+RewriteCond %{REQUEST_URI} !^/plexiq/public/
+RewriteCond %{DOCUMENT_ROOT}/plexiq/public/$1 -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+# If the request is for an existing file in public/, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
 
 # Route everything else through public/index.php
 RewriteRule ^(.*)$ public/index.php [QSA,L]

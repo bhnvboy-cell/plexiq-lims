@@ -134,7 +134,7 @@ class SapSyncService
             JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
             WHERE r.approved_at IS NOT NULL
-            AND r.created_at > COALESCE((SELECT config_value::timestamp FROM sap_config WHERE config_key = 'sap_last_sync_at'), '1970-01-01')
+            AND r.created_at > COALESCE((SELECT NULLIF(config_value, '')::timestamp FROM sap_config WHERE config_key = 'sap_last_sync_at'), '1970-01-01'::timestamp)
             ORDER BY r.created_at ASC
             LIMIT 50
         ");
@@ -170,7 +170,7 @@ class SapSyncService
             FROM coa_documents cd
             JOIN samples s ON cd.sample_id = s.id
             WHERE cd.status = 'Released' AND cd.updated_at > COALESCE(
-                (SELECT config_value::timestamp FROM sap_config WHERE config_key = 'sap_last_sync_at'), '1970-01-01'
+                (SELECT NULLIF(config_value, '')::timestamp FROM sap_config WHERE config_key = 'sap_last_sync_at'), '1970-01-01'::timestamp
             )
             LIMIT 50
         ");
@@ -326,7 +326,7 @@ class SapSyncService
                 ];
 
                 if ($existingTest) {
-                    \App\Models\TestItem::update($existingTest->id, $data);
+                    \App\Models\TestItem::update($existingTest['id'], $data);
                 } else {
                     $data['test_code'] = $testCode;
                     \App\Models\TestItem::create($data);
@@ -509,7 +509,7 @@ class SapSyncService
                 } else {
                     $this->pullFromSap($log['entity_type']);
                 }
-                $this->db->prepare("UPDATE sap_sync_logs SET status = 'Success', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                $this->db->prepare("UPDATE sap_sync_logs SET status = 'Success', synced_at = CURRENT_TIMESTAMP WHERE id = ?")
                          ->execute([$log['id']]);
             } catch (\Exception $e) {
                 $nextRetry = date('Y-m-d H:i:s', strtotime('+5 minutes'));

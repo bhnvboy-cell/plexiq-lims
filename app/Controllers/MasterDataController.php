@@ -81,8 +81,13 @@ class MasterDataController extends BaseController
         ];
 
         foreach ($tables as $table => $cfg) {
-            $stmt = $db->prepare("SELECT id, {$cfg['label_col']} AS label, {$cfg['code_col']} AS code FROM {$table} WHERE {$cfg['label_col']} ILIKE ? OR {$cfg['code_col']} ILIKE ? LIMIT 5");
-            $stmt->execute([$term, $term]);
+            if ($cfg['code_col'] === '') {
+                $stmt = $db->prepare("SELECT id, {$cfg['label_col']} AS label, '' AS code FROM {$table} WHERE {$cfg['label_col']} ILIKE ? LIMIT 5");
+                $stmt->execute([$term]);
+            } else {
+                $stmt = $db->prepare("SELECT id, {$cfg['label_col']} AS label, {$cfg['code_col']} AS code FROM {$table} WHERE {$cfg['label_col']} ILIKE ? OR {$cfg['code_col']} ILIKE ? LIMIT 5");
+                $stmt->execute([$term, $term]);
+            }
             foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
                 $results[] = [
                     'table' => $table,
@@ -180,6 +185,16 @@ class MasterDataController extends BaseController
         ]);
         Audit::log('Customer Updated', 'customers', $id);
         session_flash('success', 'Customer updated successfully.');
+        redirect('/master/customers');
+    }
+
+    public function deleteCustomer(int $id): void
+    {
+        Auth::requireRole('Admin');
+        $db = \App\Helpers\Database::connect();
+        $db->prepare("UPDATE customers SET is_active = FALSE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$id]);
+        Audit::log('Customer Deleted', 'customers', $id);
+        session_flash('success', 'Customer deleted.');
         redirect('/master/customers');
     }
 
@@ -653,8 +668,8 @@ class MasterDataController extends BaseController
         $stmt = $db->prepare("INSERT INTO coa_templates (template_name, template_html, is_default, is_active, page_size, orientation, margin_top, margin_bottom, margin_left, margin_right, logo_path, scada_logo_path, watermark_text, show_qr_code, show_barcode, show_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $_POST['template_name'], $_POST['template_html'],
-            !empty($_POST['is_default']) ? true : false,
-            !empty($_POST['is_active']) ? true : false,
+            !empty($_POST['is_default']) ? 't' : 'f',
+            !empty($_POST['is_active']) ? 't' : 'f',
             $_POST['page_size'] ?? 'A4',
             $_POST['orientation'] ?? 'portrait',
             (int)($_POST['margin_top'] ?? 15),
@@ -664,9 +679,9 @@ class MasterDataController extends BaseController
             $_POST['logo_path'] ?? null,
             $_POST['scada_logo_path'] ?? null,
             $_POST['watermark_text'] ?? null,
-            !empty($_POST['show_qr_code']) ? true : false,
-            !empty($_POST['show_barcode']) ? true : false,
-            !empty($_POST['show_signature']) ? true : false,
+            !empty($_POST['show_qr_code']) ? 't' : 'f',
+            !empty($_POST['show_barcode']) ? 't' : 'f',
+            !empty($_POST['show_signature']) ? 't' : 'f',
         ]);
         Audit::log('COA Template Created', 'coa_templates');
         session_flash('success', 'COA template created.');
@@ -692,8 +707,8 @@ class MasterDataController extends BaseController
         $stmt = $db->prepare("UPDATE coa_templates SET template_name = ?, template_html = ?, is_default = ?, is_active = ?, page_size = ?, orientation = ?, margin_top = ?, margin_bottom = ?, margin_left = ?, margin_right = ?, logo_path = ?, scada_logo_path = ?, watermark_text = ?, show_qr_code = ?, show_barcode = ?, show_signature = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
         $stmt->execute([
             $_POST['template_name'], $_POST['template_html'],
-            !empty($_POST['is_default']) ? true : false,
-            !empty($_POST['is_active']) ? true : false,
+            !empty($_POST['is_default']) ? 't' : 'f',
+            !empty($_POST['is_active']) ? 't' : 'f',
             $_POST['page_size'] ?? 'A4',
             $_POST['orientation'] ?? 'portrait',
             (int)($_POST['margin_top'] ?? 15),
@@ -703,9 +718,9 @@ class MasterDataController extends BaseController
             $_POST['logo_path'] ?? null,
             $_POST['scada_logo_path'] ?? null,
             $_POST['watermark_text'] ?? null,
-            !empty($_POST['show_qr_code']) ? true : false,
-            !empty($_POST['show_barcode']) ? true : false,
-            !empty($_POST['show_signature']) ? true : false,
+            !empty($_POST['show_qr_code']) ? 't' : 'f',
+            !empty($_POST['show_barcode']) ? 't' : 'f',
+            !empty($_POST['show_signature']) ? 't' : 'f',
             $id,
         ]);
         session_flash('success', 'COA template updated.');
@@ -778,7 +793,7 @@ class MasterDataController extends BaseController
                 $_POST['smtp_encryption'] ?? 'tls', $_POST['smtp_username'] ?? null,
                 $_POST['smtp_password'] ? \App\Services\Mailer::encrypt($_POST['smtp_password']) : null,
                 $_POST['from_address'], $_POST['from_name'] ?? null,
-                !empty($_POST['is_default']),
+                !empty($_POST['is_default']) ? 't' : 'f',
             ]);
         session_flash('success', 'Email configuration saved.');
         redirect('/master/email-config');
@@ -803,7 +818,7 @@ class MasterDataController extends BaseController
             $db->exec("UPDATE email_configurations SET is_default = FALSE");
         }
         $sql = "UPDATE email_configurations SET config_name=?, smtp_host=?, smtp_port=?, smtp_encryption=?, smtp_username=?, from_address=?, from_name=?, is_default=?, updated_at=CURRENT_TIMESTAMP";
-        $params = [$_POST['config_name'], $_POST['smtp_host'], $_POST['smtp_port'] ?? 587, $_POST['smtp_encryption'] ?? 'tls', $_POST['smtp_username'] ?? null, $_POST['from_address'], $_POST['from_name'] ?? null, !empty($_POST['is_default'])];
+        $params = [$_POST['config_name'], $_POST['smtp_host'], $_POST['smtp_port'] ?? 587, $_POST['smtp_encryption'] ?? 'tls', $_POST['smtp_username'] ?? null, $_POST['from_address'], $_POST['from_name'] ?? null, !empty($_POST['is_default']) ? 't' : 'f'];
         if (!empty($_POST['smtp_password'])) {
             $sql .= ", smtp_password=?";
             $params[] = \App\Services\Mailer::encrypt($_POST['smtp_password']);
@@ -888,7 +903,7 @@ class MasterDataController extends BaseController
                 $_POST['email'] ?? null,
                 $_POST['website'] ?? null,
                 $_POST['logo_path'] ?? null,
-                !empty($_POST['is_active']),
+                !empty($_POST['is_active']) ? 't' : 'f',
             ]);
         Audit::log('Manufacturer Created', 'manufacturers');
         session_flash('success', 'Manufacturer created successfully.');
@@ -922,7 +937,7 @@ class MasterDataController extends BaseController
                 $_POST['email'] ?? null,
                 $_POST['website'] ?? null,
                 $_POST['logo_path'] ?? null,
-                !empty($_POST['is_active']),
+                !empty($_POST['is_active']) ? 't' : 'f',
                 $id,
             ]);
         Audit::log('Manufacturer Updated', 'manufacturers', $id);
@@ -1000,7 +1015,7 @@ class MasterDataController extends BaseController
                 $_POST['max_spec_limit'] ?: null,
                 $_POST['spec_limit_text'] ?: null,
                 $_POST['sort_order'] ?? 0,
-                $_POST['is_active'] ?? true,
+                (!isset($_POST['is_active']) || !empty($_POST['is_active'])) ? 't' : 'f',
                 $id,
             ]);
         Audit::log('Product-Test Mapping Updated', 'products_tests', $id);

@@ -68,7 +68,7 @@ class ComplianceController extends BaseController
             $_POST['entity_type'],
             $_POST['retention_days'],
             $_POST['action_on_expiry'] ?? 'Archive',
-            !empty($_POST['is_active']),
+            !empty($_POST['is_active']) ? 't' : 'f',
         ]);
         Audit::log('Data Retention Policy Created', 'data_retention_policies', $db->lastInsertId());
         session_flash('success', 'Retention policy added.');
@@ -134,8 +134,8 @@ class ComplianceController extends BaseController
         $tables = ['audit_logs', 'electronic_signatures', 'notifications', 'dashboard_filters', 'dashboard_widgets'];
         $export = ['user' => $user];
         foreach ($tables as $table) {
-            $tStmt = $db->prepare("SELECT * FROM {$table} WHERE user_id = ? OR created_by = ?");
-            $tStmt->execute([$userId, $userId]);
+            $tStmt = $db->prepare("SELECT * FROM {$table} WHERE user_id = ?");
+            $tStmt->execute([$userId]);
             $export[$table] = $tStmt->fetchAll(\PDO::FETCH_ASSOC);
         }
         $db->prepare("INSERT INTO data_export_requests (user_id, requested_by, status, exported_at) VALUES (?, ?, 'Completed', CURRENT_TIMESTAMP)")->execute([$userId, Auth::id()]);

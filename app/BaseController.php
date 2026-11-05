@@ -23,7 +23,9 @@ abstract class BaseController
     protected function json($data, int $statusCode = 200): string
     {
         http_response_code($statusCode);
-        header('Content-Type: application/json');
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+        }
         return json_encode($data);
     }
 
@@ -34,7 +36,23 @@ abstract class BaseController
 
     protected function back(): void
     {
-        redirect($_SERVER['HTTP_REFERER'] ?? '/');
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $target = '/';
+        if ($referer !== '') {
+            if (str_starts_with($referer, '/') && !str_starts_with($referer, '//')) {
+                $target = $referer;
+            } else {
+                $parsed = parse_url($referer);
+                $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+                if (!empty($parsed['host']) && $currentHost !== '') {
+                    $refHostPort = $parsed['host'] . (isset($parsed['port']) ? ':' . $parsed['port'] : '');
+                    if (strcasecmp($parsed['host'], $currentHost) === 0 || strcasecmp($refHostPort, $currentHost) === 0) {
+                        $target = ($parsed['path'] ?? '/') . (isset($parsed['query']) ? '?' . $parsed['query'] : '');
+                    }
+                }
+            }
+        }
+        redirect($target);
     }
 
     protected function validate(array $data, array $rules): array
@@ -42,31 +60,43 @@ abstract class BaseController
         $errors = [];
         foreach ($rules as $field => $ruleSet) {
             $ruleList = explode('|', $ruleSet);
+            $val = $data[$field] ?? null;
+            $isEmpty = ($val === null || $val === '' || $val === []);
+
             foreach ($ruleList as $rule) {
-                if ($rule === 'required' && empty($data[$field])) {
-                    $errors[$field][] = "The {$field} field is required.";
+                if ($rule === 'required') {
+                    if ($isEmpty) {
+                        $errors[$field][] = "The {$field} field is required.";
+                    }
+                    continue;
                 }
+
+                // Skip non-required rules when value is empty
+                if ($isEmpty) {
+                    continue;
+                }
+
                 if (str_starts_with($rule, 'min:')) {
-                    $min = explode(':', $rule)[1];
-                    if (strlen($data[$field] ?? '') < $min) {
+                    $min = (int)explode(':', $rule)[1];
+                    if (strlen((string)$val) < $min) {
                         $errors[$field][] = "The {$field} must be at least {$min} characters.";
                     }
                 }
                 if (str_starts_with($rule, 'max:')) {
-                    $max = explode(':', $rule)[1];
-                    if (strlen($data[$field] ?? '') > $max) {
+                    $max = (int)explode(':', $rule)[1];
+                    if (strlen((string)$val) > $max) {
                         $errors[$field][] = "The {$field} must not exceed {$max} characters.";
                     }
                 }
-                if ($rule === 'email' && !filter_var($data[$field] ?? '', FILTER_VALIDATE_EMAIL)) {
+                if ($rule === 'email' && !filter_var($val, FILTER_VALIDATE_EMAIL)) {
                     $errors[$field][] = "The {$field} must be a valid email address.";
                 }
-                if ($rule === 'numeric' && !is_numeric($data[$field] ?? '')) {
+                if ($rule === 'numeric' && !is_numeric($val)) {
                     $errors[$field][] = "The {$field} must be a number.";
                 }
                 if (str_starts_with($rule, 'in:')) {
                     $allowed = explode(',', explode(':', $rule, 2)[1]);
-                    if (!in_array($data[$field] ?? '', $allowed)) {
+                    if (!in_array((string)$val, $allowed, true)) {
                         $errors[$field][] = "The {$field} must be one of: " . implode(', ', $allowed);
                     }
                 }

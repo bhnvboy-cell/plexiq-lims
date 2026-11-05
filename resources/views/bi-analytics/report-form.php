@@ -6,7 +6,7 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="POST" action="<?= $report ? '/bi/reports/' . $report['id'] . '/run' : '/bi/reports' ?>">
+        <form method="POST" action="<?= $report ? '/bi/reports/' . $report['id'] : '/bi/reports' ?>">
             <?= csrf_field() ?>
             <div class="row g-3">
                 <div class="col-md-6">

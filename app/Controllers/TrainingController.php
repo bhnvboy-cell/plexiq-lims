@@ -91,17 +91,34 @@ class TrainingController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE training_courses SET course_code = ?, course_name = ?, description = ?, course_type = ?, duration_hours = ?, validity_days = ?, provider = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
-            $_POST['course_code'],
-            $_POST['course_name'],
-            $_POST['description'] ?? null,
-            $_POST['category'] ?? $_POST['course_type'] ?? 'General',
-            $_POST['duration_hours'] ?: null,
-            $_POST['frequency_days'] ?? $_POST['validity_days'] ?: null,
-            $_POST['provider'] ?? null,
-            !empty($_POST['is_active']),
-            $id,
-        ]);
+        $isActive = !empty($_POST['is_active']) ? 't' : 'f';
+        $isMandatory = (!empty($_POST['is_mandatory']) || !empty($_POST['requires_certification'])) ? 't' : 'f';
+        try {
+            $db->prepare("UPDATE training_courses SET course_code = ?, course_name = ?, description = ?, course_type = ?, duration_hours = ?, validity_days = ?, provider = ?, is_mandatory = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+                $_POST['course_code'],
+                $_POST['course_name'],
+                $_POST['description'] ?? null,
+                $_POST['category'] ?? $_POST['course_type'] ?? 'General',
+                ($_POST['duration_hours'] ?? '') !== '' ? $_POST['duration_hours'] : null,
+                ($_POST['frequency_days'] ?? $_POST['validity_days'] ?? '') !== '' ? ($_POST['frequency_days'] ?? $_POST['validity_days']) : null,
+                $_POST['provider'] ?? null,
+                $isMandatory,
+                $isActive,
+                $id,
+            ]);
+        } catch (\Throwable) {
+            $db->prepare("UPDATE training_courses SET course_code = ?, course_name = ?, description = ?, course_type = ?, duration_hours = ?, validity_days = ?, provider = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+                $_POST['course_code'],
+                $_POST['course_name'],
+                $_POST['description'] ?? null,
+                $_POST['category'] ?? $_POST['course_type'] ?? 'General',
+                ($_POST['duration_hours'] ?? '') !== '' ? $_POST['duration_hours'] : null,
+                ($_POST['frequency_days'] ?? $_POST['validity_days'] ?? '') !== '' ? ($_POST['frequency_days'] ?? $_POST['validity_days']) : null,
+                $_POST['provider'] ?? null,
+                $isActive,
+                $id,
+            ]);
+        }
         Audit::log('Training Course Updated', 'training_courses', $id);
         session_flash('success', 'Training course updated.');
         $this->redirect('/training/courses');
@@ -122,11 +139,17 @@ class TrainingController extends BaseController
         return $this->render('training.assignments', ['assignments' => $userAssignments->fetchAll(\PDO::FETCH_ASSOC)]);
     }
 
-    public function assignUser(int $courseId): void
+    public function storeAssignment(): void
+    {
+        $this->assignUser();
+    }
+
+    public function assignUser(?int $courseId = null): void
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $dueDate = $_POST['due_date'] ?: date('Y-m-d', strtotime('+30 days'));
+        $courseId = $courseId ?: (int)($_POST['course_id'] ?? 0);
+        $dueDate = ($_POST['due_date'] ?? '') !== '' ? $_POST['due_date'] : date('Y-m-d', strtotime('+30 days'));
         $db->prepare("INSERT INTO training_assignments (course_id, user_id, assigned_by, due_date) VALUES (?, ?, ?, ?)")->execute([
             $courseId,
             $_POST['user_id'],
@@ -142,14 +165,38 @@ class TrainingController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $db->prepare("UPDATE training_assignments SET completed_date = ?, passed = ?, score = ?, notes = ?, completed_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
-            $_POST['completed_date'] ?? date('Y-m-d'),
-            !empty($_POST['passed']),
-            $_POST['score'] ?: null,
-            $_POST['notes'] ?? null,
-            Auth::id(),
-            $id,
-        ]);
+        $completedDate = ($_POST['completed_date'] ?? '') !== '' ? $_POST['completed_date'] : date('Y-m-d');
+        $passed = !empty($_POST['passed']) ? 't' : 'f';
+        $score = ($_POST['score'] ?? '') !== '' ? $_POST['score'] : null;
+        $notes = $_POST['notes'] ?? null;
+        try {
+            $db->prepare("UPDATE training_assignments SET completed_date = ?, passed = ?, score = ?, notes = ?, completed_by = ?, status = 'Completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+                $completedDate,
+                $passed,
+                $score,
+                $notes,
+                Auth::id(),
+                $id,
+            ]);
+        } catch (\Throwable) {
+            try {
+                $db->prepare("UPDATE training_assignments SET completed_date = ?, passed = ?, score = ?, notes = ?, completed_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
+                    $completedDate,
+                    $passed,
+                    $score,
+                    $notes,
+                    Auth::id(),
+                    $id,
+                ]);
+            } catch (\Throwable) {
+                $db->prepare("UPDATE training_assignments SET completed_date = ?, score = ?, notes = ?, status = 'Completed' WHERE id = ?")->execute([
+                    $completedDate,
+                    $score,
+                    $notes,
+                    $id,
+                ]);
+            }
+        }
         Audit::log('Training Completed', 'training_assignments', $id);
         session_flash('success', 'Completion recorded.');
         $this->redirect('/training');

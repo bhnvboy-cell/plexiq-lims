@@ -6,15 +6,15 @@ use App\BaseModel;
 
 class EnvMonitoringReading extends BaseModel
 {
-    protected static string $table = 'env_monitoring_readings';
+    protected static string $table = 'environmental_readings';
 
     public static function getLatestReadings(int $pointId, int $limit = 20): array
     {
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
             SELECT * FROM " . static::$table . "
-            WHERE monitoring_point_id = ?
-            ORDER BY recorded_at DESC
+            WHERE point_id = ?
+            ORDER BY created_at DESC
             LIMIT ?
         ");
         $stmt->execute([$pointId, $limit]);
@@ -25,10 +25,10 @@ class EnvMonitoringReading extends BaseModel
     {
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
-            SELECT * FROM " . static::$table . "
-            WHERE is_alert = 1
-              AND recorded_at >= ?
-            ORDER BY recorded_at DESC
+            SELECT r.* FROM " . static::$table . " r
+            WHERE r.is_alert = TRUE
+              AND r.created_at >= ?
+            ORDER BY r.created_at DESC
         ");
         $stmt->execute([$since]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

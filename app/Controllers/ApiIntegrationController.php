@@ -33,17 +33,21 @@ class ApiIntegrationController extends BaseController
 
         $expiresIn = (int)($_POST['expires_in'] ?? 90);
         $expiresAt = $expiresIn > 0 ? date('Y-m-d H:i:s', strtotime("+{$expiresIn} days")) : null;
+        $tokenName = $_POST['token_name'] ?? $_POST['name'] ?? 'API Token';
+        $tokenPrefix = substr($token, 0, 10);
 
-        $db->prepare("INSERT INTO api_tokens (user_id, token_hash, token_name, permissions, expires_at, is_active) VALUES (?, ?, ?, ?::jsonb, ?, TRUE)")->execute([
+        $db->prepare("INSERT INTO api_tokens (user_id, token_name, token_hash, token_prefix, permissions, expires_at, is_active) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)")->execute([
             Auth::id(),
+            $tokenName,
             hash('sha256', $token),
-            $_POST['name'] ?? 'API Token',
+            $tokenPrefix,
             json_encode($permissions),
             $expiresAt,
+            't',
         ]);
-        Audit::log('API Token Created', 'api_tokens', null, null, ['name' => $_POST['name'] ?? 'API Token', 'scope' => $scope]);
+        Audit::log('API Token Created', 'api_tokens', null, null, ['name' => $tokenName, 'scope' => $scope]);
         session_flash('success', 'Token created.');
-        $this->render('api.tokens', ['tokens' => $this->fetchTokens(), 'newToken' => $token]);
+        return $this->render('api.tokens', ['tokens' => $this->fetchTokens(), 'newToken' => $token]);
     }
 
     private function fetchTokens(): array
@@ -98,7 +102,7 @@ class ApiIntegrationController extends BaseController
             $_POST['url'],
             $eventsJson,
             $_POST['secret'] ?? bin2hex(random_bytes(16)),
-            !empty($_POST['is_active']),
+            (!isset($_POST['is_active']) || !empty($_POST['is_active'])) ? 't' : 'f',
         ]);
         $webhookId = $db->lastInsertId();
         Audit::log('Webhook Created', 'api_webhooks', $webhookId);
@@ -114,7 +118,7 @@ class ApiIntegrationController extends BaseController
         $stmt->execute([$id, Auth::id()]);
         $wh = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($wh) {
-            $db->prepare("UPDATE api_webhooks SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$wh['is_active'], $id]);
+            $db->prepare("UPDATE api_webhooks SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$wh['is_active'] ? 't' : 'f', $id]);
             Audit::log('Webhook Toggled', 'api_webhooks', $id);
         }
         $this->redirect('/api-management/webhooks');
@@ -140,7 +144,7 @@ class ApiIntegrationController extends BaseController
             $_POST['url'],
             is_array($_POST['events'] ?? []) ? json_encode($_POST['events']) : ($_POST['events'] ?? '[]'),
             $_POST['secret'] ?? '',
-            !empty($_POST['is_active']),
+            !empty($_POST['is_active']) ? 't' : 'f',
             $id, Auth::id(),
         ]);
         Audit::log('Webhook Updated', 'api_webhooks', $id);

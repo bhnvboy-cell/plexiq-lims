@@ -61,9 +61,10 @@ class SpcReading extends BaseModel
         $cpl = $stddev > 0 ? ($mean - $lsl) / (3 * $stddev) : null;
         $cpk = $cpu !== null && $cpl !== null ? min($cpu, $cpl) : null;
 
-        $cp_upper = $target !== null ? ($usl - $target) / (3 * $stddev) : null;
-        $cp_lower = $target !== null ? ($target - $lsl) / (3 * $stddev) : null;
-        $cpm = ($cp_upper !== null && $cp_lower !== null) ? min($cp_upper, $cp_lower) : null;
+        $cp_upper = ($target !== null && $stddev > 0) ? ($usl - $target) / (3 * $stddev) : null;
+        $cp_lower = ($target !== null && $stddev > 0) ? ($target - $lsl) / (3 * $stddev) : null;
+        $cpmDenom = $target !== null ? 6 * sqrt(($stddev ** 2) + (($mean - $target) ** 2)) : 0.0;
+        $cpm = ($target !== null && $cpmDenom > 0) ? ($usl - $lsl) / $cpmDenom : null;
 
         return [
             'n' => (int)$stats['n'],
@@ -187,13 +188,17 @@ class SpcReading extends BaseModel
         // Rule 5: two of three consecutive points beyond 2σ on the same side
         if ($sigma !== null && $n >= 3) {
             for ($i = 0; $i <= $n - 3; $i++) {
-                $count = 0;
+                $above = 0;
+                $below = 0;
                 for ($j = $i; $j < $i + 3; $j++) {
-                    if (abs($z($values[$j]) ?? 0) > 2) {
-                        $count++;
+                    $zv = $z($values[$j]) ?? 0;
+                    if ($zv > 2) {
+                        $above++;
+                    } elseif ($zv < -2) {
+                        $below++;
                     }
                 }
-                if ($count >= 2) {
+                if ($above >= 2 || $below >= 2) {
                     $violations[] = ['index' => $i + 2, 'rule' => 5, 'rule_text' => 'Two of three consecutive points beyond 2σ on the same side'];
                     break;
                 }
@@ -203,13 +208,17 @@ class SpcReading extends BaseModel
         // Rule 6: four of five consecutive points beyond 1σ on the same side
         if ($sigma !== null && $n >= 5) {
             for ($i = 0; $i <= $n - 5; $i++) {
-                $count = 0;
+                $above = 0;
+                $below = 0;
                 for ($j = $i; $j < $i + 5; $j++) {
-                    if (abs($z($values[$j]) ?? 0) > 1) {
-                        $count++;
+                    $zv = $z($values[$j]) ?? 0;
+                    if ($zv > 1) {
+                        $above++;
+                    } elseif ($zv < -1) {
+                        $below++;
                     }
                 }
-                if ($count >= 4) {
+                if ($above >= 4 || $below >= 4) {
                     $violations[] = ['index' => $i + 4, 'rule' => 6, 'rule_text' => 'Four of five consecutive points beyond 1σ on the same side'];
                     break;
                 }

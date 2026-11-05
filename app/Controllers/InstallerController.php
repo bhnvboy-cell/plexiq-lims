@@ -9,7 +9,7 @@ class InstallerController extends BaseController
 {
     public function builder(): string
     {
-        Auth::requireAuth();
+        Auth::requireRole('Admin');
 
         $isccPath = $this->findIscc();
         $settings = $this->loadSettings();
@@ -23,7 +23,7 @@ class InstallerController extends BaseController
 
     public function build(): void
     {
-        Auth::requireAuth();
+        Auth::requireRole('Admin');
         $iscc = $this->findIscc();
         if (!$iscc) {
             session_flash('error', 'ISCC.exe (Inno Setup) not found on this server.');
@@ -33,17 +33,18 @@ class InstallerController extends BaseController
         $db = \App\Helpers\Database::connect();
 
         // Gather form settings
+        $rawPass = $_POST['db_pass'] ?? '';
         $settings = [
-            'app_name' => $_POST['app_name'] ?? 'PlexiQ LIMS Server',
-            'app_version' => $_POST['app_version'] ?? '2.0',
-            'app_publisher' => $_POST['app_publisher'] ?? 'PlexiQ Labs',
-            'server_port' => $_POST['server_port'] ?? '8080',
-            'db_host' => $_POST['db_host'] ?? '127.0.0.1',
-            'db_port' => $_POST['db_port'] ?? '5432',
-            'db_name' => $_POST['db_name'] ?? 'limsdb',
-            'db_user' => $_POST['db_user'] ?? 'postgres',
-            'db_pass' => $_POST['db_pass'] ?? '',
-            'output_filename' => $_POST['output_filename'] ?? 'PlexiQ-LIMS-Server-Setup',
+            'app_name' => $this->sanitizeConfigValue($_POST['app_name'] ?? 'PlexiQ LIMS Server'),
+            'app_version' => $this->sanitizeConfigValue($_POST['app_version'] ?? '2.0'),
+            'app_publisher' => $this->sanitizeConfigValue($_POST['app_publisher'] ?? 'PlexiQ Labs'),
+            'server_port' => $this->sanitizeConfigValue($_POST['server_port'] ?? '8080'),
+            'db_host' => $this->sanitizeConfigValue($_POST['db_host'] ?? '127.0.0.1'),
+            'db_port' => $this->sanitizeConfigValue($_POST['db_port'] ?? '5432'),
+            'db_name' => $this->sanitizeConfigValue($_POST['db_name'] ?? 'limsdb'),
+            'db_user' => $this->sanitizeConfigValue($_POST['db_user'] ?? 'postgres'),
+            'db_pass' => $this->sanitizeConfigValue($rawPass !== '' ? $rawPass : ($_ENV['DB_PASSWORD'] ?? '')),
+            'output_filename' => $this->sanitizeConfigValue($_POST['output_filename'] ?? 'PlexiQ-LIMS-Server-Setup'),
         ];
 
         // Generate unique build ID
@@ -148,7 +149,7 @@ class InstallerController extends BaseController
 
     public function download(): void
     {
-        Auth::requireAuth();
+        Auth::requireRole('Admin');
         $exePath = $_SESSION['_installer_download'] ?? null;
         if (!$exePath || !file_exists($exePath)) {
             session_flash('error', 'No installer available for download.');
@@ -166,7 +167,10 @@ class InstallerController extends BaseController
 
     public function log(string $buildId): string
     {
-        Auth::requireAuth();
+        Auth::requireRole('Admin');
+        if (!preg_match('/^build_\d+_[a-f0-9]+$/', $buildId)) {
+            return $this->json(['error' => 'Invalid build ID'], 400);
+        }
         $logFile = __DIR__ . '/../../storage/installer/' . $buildId . '/build.log';
         if (!file_exists($logFile)) {
             return $this->json(['error' => 'Log not found']);
@@ -176,7 +180,7 @@ class InstallerController extends BaseController
 
     public function history(): string
     {
-        Auth::requireAuth();
+        Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
         $stmt = $db->query("
             SELECT ib.*, u.full_name AS built_by_name
@@ -189,6 +193,11 @@ class InstallerController extends BaseController
     }
 
     // --- Private helpers ---
+
+    private function sanitizeConfigValue(string $value): string
+    {
+        return preg_replace('/[\r\n";#]/', '', $value) ?? '';
+    }
 
     private function findIscc(): ?string
     {
@@ -216,7 +225,7 @@ class InstallerController extends BaseController
         $port = $_ENV['DB_PORT'] ?? '5432';
         $name = $_ENV['DB_DATABASE'] ?? 'limsdb';
         $user = $_ENV['DB_USERNAME'] ?? 'postgres';
-        $pass = $_ENV['DB_PASSWORD'] ?? '';
+        $pass = '';
 
         // Read current SERVER_PORT from .env or config.ini
         $srvPort = '8080';
@@ -248,16 +257,16 @@ class InstallerController extends BaseController
 
     private function generateIss(array $settings, string $buildDir): string
     {
-        $name = $settings['app_name'];
-        $ver = $settings['app_version'];
-        $pub = $settings['app_publisher'];
-        $port = $settings['server_port'];
-        $dbHost = $settings['db_host'];
-        $dbPort = $settings['db_port'];
-        $dbName = $settings['db_name'];
-        $dbUser = $settings['db_user'];
-        $dbPass = $settings['db_pass'];
-        $outFile = $settings['output_filename'];
+        $name = $this->sanitizeConfigValue($settings['app_name']);
+        $ver = $this->sanitizeConfigValue($settings['app_version']);
+        $pub = $this->sanitizeConfigValue($settings['app_publisher']);
+        $port = $this->sanitizeConfigValue($settings['server_port']);
+        $dbHost = $this->sanitizeConfigValue($settings['db_host']);
+        $dbPort = $this->sanitizeConfigValue($settings['db_port']);
+        $dbName = $this->sanitizeConfigValue($settings['db_name']);
+        $dbUser = $this->sanitizeConfigValue($settings['db_user']);
+        $dbPass = $this->sanitizeConfigValue($settings['db_pass']);
+        $outFile = $this->sanitizeConfigValue($settings['output_filename']);
 
         return <<<ISS
 ; PlexiQ LIMS Server - Inno Setup Script
@@ -334,15 +343,22 @@ ISS;
 
     private function generateEnv(array $settings): string
     {
+        $dbHost = $this->sanitizeConfigValue($settings['db_host']);
+        $dbPort = $this->sanitizeConfigValue($settings['db_port']);
+        $dbName = $this->sanitizeConfigValue($settings['db_name']);
+        $dbUser = $this->sanitizeConfigValue($settings['db_user']);
+        $dbPass = $this->sanitizeConfigValue($settings['db_pass']);
+        $srvPort = $this->sanitizeConfigValue($settings['server_port']);
+
         return <<<ENV
 # PlexiQ LIMS - Environment Configuration
-DB_HOST={$settings['db_host']}
-DB_PORT={$settings['db_port']}
-DB_DATABASE={$settings['db_name']}
-DB_USERNAME={$settings['db_user']}
-DB_PASSWORD={$settings['db_pass']}
-SERVER_PORT={$settings['server_port']}
-APP_URL=http://localhost:{$settings['server_port']}
+DB_HOST={$dbHost}
+DB_PORT={$dbPort}
+DB_DATABASE={$dbName}
+DB_USERNAME={$dbUser}
+DB_PASSWORD={$dbPass}
+SERVER_PORT={$srvPort}
+APP_URL=http://localhost:{$srvPort}
 APP_ENV=production
 APP_DEBUG=false
 SESSION_DRIVER=file

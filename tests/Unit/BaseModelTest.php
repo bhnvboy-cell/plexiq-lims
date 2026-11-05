@@ -23,67 +23,89 @@ class BaseModelTest extends TestCase
         // Create mock PDO using PostgreSQL driver
         // Connect to local test database if available, otherwise create a partial mock
         try {
+            $host = env('DB_HOST', '127.0.0.1');
+            $port = env('DB_PORT', '5432');
+            $dbName = env('DB_DATABASE', 'limsdb');
+            $user = env('DB_USERNAME', 'postgres');
+            $pass = env('DB_PASSWORD', '');
             $this->pdo = new \PDO(
-                'pgsql:host=127.0.0.1;port=5432;dbname=limsdb_test',
-                'lims_user',
-                'lims_test_pass',
+                "pgsql:host={$host};port={$port};dbname={$dbName}",
+                $user,
+                $pass,
                 [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
             );
-            // Ensure test table exists
+            // Ensure test table exists and is empty
             $this->pdo->exec("
                 CREATE TABLE IF NOT EXISTS test_users (
                     id SERIAL PRIMARY KEY,
                     name TEXT NOT NULL,
                     email TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
+                );
+                TRUNCATE TABLE test_users RESTART IDENTITY;
             ");
         } catch (\PDOException $e) {
             // No test database available - create a mock
             $this->pdo = $this->createMock(\PDO::class);
-            // Mark tests as skipped if no database
-            if (getenv('SKIP_DB_TESTS')) {
-                $this->markTestSkipped('No test database available. Set up limsdb_test or set SKIP_DB_TESTS=0.');
-            }
         }
 
         TestUserModel::setPdo($this->pdo);
     }
 
+    public function test_find_returns_null_for_missing_record(): void
+    {
+        if (!($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql')) {
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('execute')->with([99999])->willReturn(true);
+            $stmt->expects($this->once())->method('fetch')->with(\PDO::FETCH_ASSOC)->willReturn(false);
+            $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
+        }
+        $result = TestUserModel::find(99999);
+        $this->assertNull($result);
+    }
+
     public function test_create_inserts_record_and_returns_data(): void
     {
-        if ($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
-            $result = TestUserModel::create([
+        if (!($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql')) {
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('execute')->with(['John Doe', 'john@example.com'])->willReturn(true);
+            $stmt->expects($this->once())->method('fetch')->with(\PDO::FETCH_ASSOC)->willReturn([
+                'id' => 1,
                 'name' => 'John Doe',
                 'email' => 'john@example.com',
             ]);
-
-            $this->assertNotNull($result, 'create() should return the inserted record');
-            $this->assertEquals('John Doe', $result['name']);
-            $this->assertEquals('john@example.com', $result['email']);
-        } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
         }
+        $result = TestUserModel::create([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+        ]);
+
+        $this->assertNotNull($result, 'create() should return the inserted record');
+        $this->assertEquals('John Doe', $result['name']);
+        $this->assertEquals('john@example.com', $result['email']);
     }
 
     public function test_find_returns_record_by_id(): void
     {
         if ($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
             $result = TestUserModel::create(['name' => 'Jane Doe', 'email' => 'jane@example.com']);
-            $id = $result['id'];
-
-            $found = TestUserModel::find((int)$id);
-            $this->assertNotNull($found);
-            $this->assertEquals('Jane Doe', $found['name']);
+            $id = (int)$result['id'];
         } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $id = 1;
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('execute')->with([1])->willReturn(true);
+            $stmt->expects($this->once())->method('fetch')->with(\PDO::FETCH_ASSOC)->willReturn([
+                'id' => 1,
+                'name' => 'Jane Doe',
+                'email' => 'jane@example.com',
+            ]);
+            $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
         }
-    }
 
-    public function test_find_returns_null_for_missing_record(): void
-    {
-        $result = TestUserModel::find(99999);
-        $this->assertNull($result);
+        $found = TestUserModel::find($id);
+        $this->assertNotNull($found);
+        $this->assertEquals('Jane Doe', $found['name']);
     }
 
     public function test_all_returns_all_records(): void
@@ -91,12 +113,17 @@ class BaseModelTest extends TestCase
         if ($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
             TestUserModel::create(['name' => 'User A']);
             TestUserModel::create(['name' => 'User B']);
-
-            $results = TestUserModel::all();
-            $this->assertCount(2, $results);
         } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('fetchAll')->with(\PDO::FETCH_ASSOC)->willReturn([
+                ['id' => 1, 'name' => 'User A'],
+                ['id' => 2, 'name' => 'User B'],
+            ]);
+            $this->pdo->expects($this->once())->method('query')->willReturn($stmt);
         }
+
+        $results = TestUserModel::all();
+        $this->assertCount(2, $results);
     }
 
     public function test_update_modifies_record(): void
@@ -111,7 +138,12 @@ class BaseModelTest extends TestCase
             $found = TestUserModel::find($id);
             $this->assertEquals('New Name', $found['name']);
         } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('execute')->with(['New Name', 1])->willReturn(true);
+            $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
+
+            $updated = TestUserModel::update(1, ['name' => 'New Name']);
+            $this->assertTrue($updated);
         }
     }
 
@@ -126,7 +158,12 @@ class BaseModelTest extends TestCase
 
             $this->assertNull(TestUserModel::find($id));
         } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('execute')->with([1])->willReturn(true);
+            $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
+
+            $deleted = TestUserModel::delete(1);
+            $this->assertTrue($deleted);
         }
     }
 
@@ -137,16 +174,36 @@ class BaseModelTest extends TestCase
             TestUserModel::create(['name' => 'Count A']);
             $this->assertEquals($before + 1, TestUserModel::count());
         } else {
-            $this->markTestSkipped('Requires PostgreSQL test database');
+            $stmt = $this->createMock(\PDOStatement::class);
+            $stmt->expects($this->once())->method('fetchColumn')->willReturn(5);
+            $this->pdo->expects($this->once())->method('query')->willReturn($stmt);
+
+            $this->assertEquals(5, TestUserModel::count());
         }
+    }
+
+    public function test_validate_identifier_rejects_sql_injection(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        TestUserModel::checkIdentifier('name; DROP TABLE users; --');
+    }
+
+    public function test_normalize_values_converts_booleans_for_postgres(): void
+    {
+        $normalized = TestUserModel::checkNormalize([true, false, 'text', 0, null]);
+        $this->assertSame(['t', 'f', 'text', 0, null], $normalized);
     }
 
     protected function tearDown(): void
     {
-        if ($this->pdo instanceof \PDO && $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
-            $this->pdo->exec('DROP TABLE IF EXISTS test_users CASCADE');
+        if (isset($this->pdo) && $this->pdo instanceof \PDO) {
+            try {
+                if ($this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'pgsql') {
+                    $this->pdo->exec('DROP TABLE IF EXISTS test_users CASCADE');
+                }
+            } catch (\Throwable $e) {
+            }
         }
-        $this->pdo = null;
         Database::disconnect();
         parent::tearDown();
     }
@@ -168,5 +225,15 @@ class TestUserModel extends BaseModel
     protected static function getPdo(): \PDO
     {
         return self::$testPdo ?? Database::connect();
+    }
+
+    public static function checkIdentifier(string $col): string
+    {
+        return static::validateIdentifier($col);
+    }
+
+    public static function checkNormalize(array $values): array
+    {
+        return static::normalizeValues($values);
     }
 }

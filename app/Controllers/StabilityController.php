@@ -41,8 +41,8 @@ class StabilityController extends BaseController
         $db->prepare("INSERT INTO stability_studies (study_code, study_name, product_id, batch_id, study_type, condition_temperature, condition_humidity, condition_light, storage_condition, protocol_ref, status, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
             $_POST['study_code'],
             $_POST['study_name'],
-            $_POST['product_id'] ?? null,
-            $_POST['batch_id'] ?? null,
+            ($_POST['product_id'] ?? '') !== '' ? (int)$_POST['product_id'] : null,
+            ($_POST['batch_id'] ?? '') !== '' ? (int)$_POST['batch_id'] : null,
             $_POST['study_type'] ?? 'Long Term',
             ($_POST['condition_temperature'] ?? '') !== '' ? $_POST['condition_temperature'] : null,
             ($_POST['condition_humidity'] ?? '') !== '' ? $_POST['condition_humidity'] : null,
@@ -117,8 +117,8 @@ class StabilityController extends BaseController
         $db->prepare("UPDATE stability_studies SET study_code = ?, study_name = ?, product_id = ?, batch_id = ?, study_type = ?, condition_temperature = ?, condition_humidity = ?, condition_light = ?, storage_condition = ?, protocol_ref = ?, status = ?, start_date = ?, end_date = ?, report_conclusion = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['study_code'],
             $_POST['study_name'],
-            $_POST['product_id'] ?? null,
-            $_POST['batch_id'] ?? null,
+            ($_POST['product_id'] ?? '') !== '' ? (int)$_POST['product_id'] : null,
+            ($_POST['batch_id'] ?? '') !== '' ? (int)$_POST['batch_id'] : null,
             $_POST['study_type'] ?? 'Long Term',
             ($_POST['condition_temperature'] ?? '') !== '' ? $_POST['condition_temperature'] : null,
             ($_POST['condition_humidity'] ?? '') !== '' ? $_POST['condition_humidity'] : null,

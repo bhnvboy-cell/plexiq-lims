@@ -27,6 +27,11 @@ class Router
         $this->addRoute('DELETE', $path, $handler, $middleware);
     }
 
+    public function patch(string $path, $handler, array $middleware = []): void
+    {
+        $this->addRoute('PATCH', $path, $handler, $middleware);
+    }
+
     private function addRoute(string $method, string $path, $handler, array $middleware): void
     {
         $pattern = preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $path);
@@ -51,10 +56,19 @@ class Router
         $uri = rtrim($uri, '/') ?: '/';
 
         // CSRF protection for state-changing requests (skip API routes)
-        if (in_array($method, ['POST', 'PUT', 'DELETE']) && !str_starts_with($uri, '/api/')) {
+        if (in_array($method, ['POST', 'PUT', 'DELETE', 'PATCH']) && !str_starts_with($uri, '/api/')) {
             if (!csrf_validate()) {
                 http_response_code(419);
-                echo '<h1>419 Page Expired</h1><p>CSRF token mismatch. Please go back and try again.</p>';
+                $expectsJson = str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+                    || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+                if ($expectsJson) {
+                    if (!headers_sent()) {
+                        header('Content-Type: application/json');
+                    }
+                    echo json_encode(['error' => 'CSRF token mismatch']);
+                } else {
+                    echo '<h1>419 Page Expired</h1><p>CSRF token mismatch. Please go back and try again.</p>';
+                }
                 return;
             }
         }

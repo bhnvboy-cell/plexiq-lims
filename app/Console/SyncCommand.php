@@ -18,9 +18,12 @@ if (file_exists($envFile)) {
         if (str_contains($line, '=')) {
             [$k, $v] = explode('=', $line, 2);
             $_ENV[trim($k)] = trim($v);
+            putenv(trim($k) . '=' . trim($v));
         }
     }
 }
+
+require_once __DIR__ . '/../Helpers/helpers.php';
 
 // Initialize session-less environment for CLI
 if (session_status() === PHP_SESSION_NONE && php_sapi_name() !== 'cli') {
@@ -32,9 +35,16 @@ try {
     $results = $syncService->runScheduledSync();
 
     echo "[" . date('Y-m-d H:i:s') . "] SAP Sync completed:\n";
-    foreach ($results as $key => $result) {
-        $status = $result['success'] ? 'OK' : 'FAIL';
-        echo "  {$key}: [{$status}] {$result['message']}\n";
+    if (isset($results['success']) && is_bool($results['success'])) {
+        $status = $results['success'] ? 'OK' : 'SKIP';
+        echo "  sap: [{$status}] " . ($results['message'] ?? '') . "\n";
+    } else {
+        foreach ($results as $key => $result) {
+            if (is_array($result)) {
+                $status = !empty($result['success']) ? 'OK' : 'FAIL';
+                echo "  {$key}: [{$status}] " . ($result['message'] ?? '') . "\n";
+            }
+        }
     }
 
     // Log to file

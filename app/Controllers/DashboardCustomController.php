@@ -46,12 +46,22 @@ class DashboardCustomController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO dashboard_filters (user_id, filter_name, filter_data, is_global) VALUES (?, ?, ?, ?)")->execute([
-            Auth::id(),
-            $_POST['filter_name'],
-            $_POST['filter_data'],
-            !empty($_POST['is_global']) && Auth::role() === 'Admin',
-        ]);
+        $isFlag = ((!empty($_POST['is_default'])) || (!empty($_POST['is_global']) && Auth::role() === 'Admin')) ? 't' : 'f';
+        try {
+            $db->prepare("INSERT INTO dashboard_filters (user_id, filter_name, filter_data, is_global) VALUES (?, ?, ?, ?)")->execute([
+                Auth::id(),
+                $_POST['filter_name'],
+                $_POST['filter_data'] ?? $_POST['filter_config'] ?? '{}',
+                $isFlag,
+            ]);
+        } catch (\Throwable) {
+            $db->prepare("INSERT INTO dashboard_filters (user_id, filter_name, filter_config, is_default) VALUES (?, ?, ?, ?)")->execute([
+                Auth::id(),
+                $_POST['filter_name'],
+                $_POST['filter_config'] ?? $_POST['filter_data'] ?? '{}',
+                $isFlag,
+            ]);
+        }
         session_flash('success', 'Dashboard filter saved.');
         $this->back();
     }

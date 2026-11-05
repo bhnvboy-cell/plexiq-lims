@@ -218,11 +218,11 @@ class ClientController extends BaseController
             JOIN tests t ON st.test_id = t.id
             LEFT JOIN methods m ON t.method_id = m.id
             LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
             LEFT JOIN users ent ON r.entered_by = ent.id
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved')
+            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
             ORDER BY t.test_code
         ");
         $testStmt->execute([$document['sample_id']]);
@@ -245,7 +245,34 @@ class ClientController extends BaseController
     public function downloadPdf(int $id): void
     {
         Auth::requireAnyRole(['Customer']);
+        $user = Auth::user();
+        $db = \App\Helpers\Database::connect();
+
+        $stmt = $db->prepare("SELECT id FROM customers WHERE email = ? AND is_active = TRUE");
+        $stmt->execute([$user['email'] ?? '']);
+        $customer = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$customer) {
+            abort(403, 'Customer profile not found.');
+        }
+
+        $coaStmt = $db->prepare("
+            SELECT cd.id, cd.status, s.customer_id
+            FROM coa_documents cd
+            JOIN samples s ON cd.sample_id = s.id
+            WHERE (cd.id = ? OR cd.sample_id = ?)
+              AND cd.deleted_at IS NULL
+              AND s.customer_id = ?
+              AND cd.status = 'Released'
+            ORDER BY cd.id DESC
+            LIMIT 1
+        ");
+        $coaStmt->execute([$id, $id, $customer['id']]);
+        $coa = $coaStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$coa) {
+            abort(403, 'Access denied or COA not released.');
+        }
+
         $pdfService = new \App\Services\PdfService();
-        $pdfService->downloadCoa($id);
+        $pdfService->downloadCoa((int)$coa['id']);
     }
 }

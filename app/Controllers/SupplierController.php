@@ -103,8 +103,8 @@ class SupplierController extends BaseController
             $_POST['supplier_type'] ?? 'Raw Material',
             $_POST['payment_terms'] ?? null,
             $_POST['notes'] ?? null,
-            $_POST['approval_status'] ?? 'Pending',
-            !empty($_POST['is_active']),
+            $_POST['status'] ?? $_POST['approval_status'] ?? 'Active',
+            (!empty($_POST['is_approved']) || !empty($_POST['is_active'])) ? 't' : 'f',
             $id,
         ]);
         Audit::log('Supplier Updated', 'suppliers', $id);

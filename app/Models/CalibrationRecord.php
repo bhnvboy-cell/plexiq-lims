@@ -13,10 +13,10 @@ class CalibrationRecord extends BaseModel
         $db = \App\Helpers\Database::connect();
         $stmt = $db->query("
             SELECT * FROM " . static::$table . "
-            WHERE next_due_date IS NOT NULL
-              AND next_due_date < CURDATE()
-              AND (completed_date IS NULL OR completed_date < next_due_date)
-            ORDER BY next_due_date ASC
+            WHERE COALESCE(next_due_date, next_calibration_date, due_date) IS NOT NULL
+              AND COALESCE(next_due_date, next_calibration_date, due_date) < CURRENT_DATE
+              AND (calibration_date IS NULL OR calibration_date < COALESCE(next_due_date, next_calibration_date, due_date))
+            ORDER BY COALESCE(next_due_date, next_calibration_date, due_date) ASC
         ");
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
@@ -26,9 +26,9 @@ class CalibrationRecord extends BaseModel
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
             SELECT * FROM " . static::$table . "
-            WHERE next_due_date IS NOT NULL
-              AND next_due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
-            ORDER BY next_due_date ASC
+            WHERE COALESCE(next_due_date, next_calibration_date, due_date) IS NOT NULL
+              AND COALESCE(next_due_date, next_calibration_date, due_date) BETWEEN CURRENT_DATE AND CURRENT_DATE + (? || ' days')::interval
+            ORDER BY COALESCE(next_due_date, next_calibration_date, due_date) ASC
         ");
         $stmt->execute([$days]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

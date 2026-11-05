@@ -4,19 +4,46 @@ namespace App\Helpers;
 
 class Audit
 {
+    private static function canonicalJson($val): ?string
+    {
+        if ($val === null || $val === '') {
+            return null;
+        }
+        if (is_string($val)) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return $val;
+            }
+            $val = $decoded;
+        }
+        $sortKeys = function (&$item) use (&$sortKeys) {
+            if (is_array($item)) {
+                if (array_keys($item) !== range(0, count($item) - 1)) {
+                    ksort($item);
+                }
+                foreach ($item as &$sub) {
+                    $sortKeys($sub);
+                }
+            }
+        };
+        $sortKeys($val);
+        return json_encode($val, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
     public static function log(string $action, string $entityType, ?int $entityId = null, $oldValue = null, $newValue = null): void
     {
         try {
             $db = Database::connect();
-            $oldJson = $oldValue ? json_encode($oldValue) : null;
-            $newJson = $newValue ? json_encode($newValue) : null;
+            $oldJson = $oldValue !== null && $oldValue !== '' ? self::canonicalJson($oldValue) : null;
+            $newJson = $newValue !== null && $newValue !== '' ? self::canonicalJson($newValue) : null;
+            $userId = Auth::id() ?? (isset($_REQUEST['_api_user_id']) ? (int)$_REQUEST['_api_user_id'] : null);
 
             $prevHash = self::lastChainHash($db);
             $createdAt = $db->query('SELECT CURRENT_TIMESTAMP')->fetchColumn();
             $at = date('c', strtotime($createdAt));
 
             $rowPayload = json_encode([
-                'user' => Auth::id(),
+                'user' => $userId,
                 'action' => $action,
                 'entity_type' => $entityType,
                 'entity_id' => $entityId,
@@ -26,7 +53,7 @@ class Audit
                 'ua' => $_SERVER['HTTP_USER_AGENT'] ?? '',
                 'at' => $at,
                 'prev' => $prevHash,
-            ]);
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             $chainHash = hash('sha256', $rowPayload);
 
             $stmt = $db->prepare(
@@ -34,7 +61,7 @@ class Audit
                  VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([
-                Auth::id(),
+                $userId,
                 $action,
                 $entityType,
                 $entityId,
@@ -74,17 +101,17 @@ class Audit
             }
             $at = date('c', strtotime($row['created_at']));
             $rowPayload = json_encode([
-                'user' => $row['user_id'],
+                'user' => $row['user_id'] !== null ? (int)$row['user_id'] : null,
                 'action' => $row['action'],
                 'entity_type' => $row['entity_type'],
-                'entity_id' => $row['entity_id'],
-                'old' => $row['old_value'],
-                'new' => $row['new_value'],
+                'entity_id' => $row['entity_id'] !== null ? (int)$row['entity_id'] : null,
+                'old' => self::canonicalJson($row['old_value']),
+                'new' => self::canonicalJson($row['new_value']),
                 'ip' => $row['ip_address'],
                 'ua' => $row['user_agent'],
                 'at' => $at,
                 'prev' => $prev,
-            ]);
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             $computed = hash('sha256', $rowPayload);
             if ($computed !== $row['hash_chain']) {
                 $issues[] = ['id' => $row['id'], 'reason' => 'hash mismatch', 'stored' => $row['hash_chain'], 'computed' => $computed];

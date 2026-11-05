@@ -8,11 +8,18 @@ class ProductTest extends BaseModel
     protected static string $table = 'products_tests';
     protected static string $primaryKey = 'id';
 
-    public static function findByProduct(int $productId): array
+    public static function findByProduct(?int $productId): array
     {
+        if (!$productId) {
+            return [];
+        }
         $db = \App\Helpers\Database::connect();
         $stmt = $db->prepare("
-            SELECT pt.*, t.test_code, t.test_name, t.spec_limit_text AS global_spec,
+            SELECT pt.*, t.test_code, t.test_name,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                   COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text,
+                   t.spec_limit_text AS global_spec,
                    m.method_name, m.method_code,
                    u.unit_code, u.unit_name
             FROM products_tests pt

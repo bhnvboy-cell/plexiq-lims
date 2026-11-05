@@ -18,40 +18,25 @@ class ValidationTest extends TestCase
 {
     private function validate(array $data, array $rules): array
     {
-        $errors = [];
-        foreach ($rules as $field => $ruleSet) {
-            $ruleList = explode('|', $ruleSet);
-            foreach ($ruleList as $rule) {
-                if ($rule === 'required' && empty($data[$field]) && $data[$field] !== '0' && $data[$field] !== 0) {
-                    $errors[$field][] = "The {$field} field is required.";
-                }
-                if (str_starts_with($rule, 'min:')) {
-                    $min = (int)explode(':', $rule)[1];
-                    if (strlen((string)($data[$field] ?? '')) < $min) {
-                        $errors[$field][] = "The {$field} must be at least {$min} characters.";
-                    }
-                }
-                if (str_starts_with($rule, 'max:')) {
-                    $max = (int)explode(':', $rule)[1];
-                    if (strlen((string)($data[$field] ?? '')) > $max) {
-                        $errors[$field][] = "The {$field} must not exceed {$max} characters.";
-                    }
-                }
-                if ($rule === 'email' && isset($data[$field]) && !filter_var($data[$field], FILTER_VALIDATE_EMAIL)) {
-                    $errors[$field][] = "The {$field} must be a valid email address.";
-                }
-                if ($rule === 'numeric' && isset($data[$field]) && !is_numeric($data[$field])) {
-                    $errors[$field][] = "The {$field} must be a number.";
-                }
-                if (str_starts_with($rule, 'in:')) {
-                    $allowed = explode(',', explode(':', $rule, 2)[1]);
-                    if (isset($data[$field]) && !in_array($data[$field], $allowed)) {
-                        $errors[$field][] = "The {$field} must be one of: " . implode(', ', $allowed);
-                    }
-                }
+        $controller = new class extends \App\BaseController {
+            public function runValidate(array $data, array $rules): array
+            {
+                return $this->validate($data, $rules);
             }
-        }
-        return $errors;
+        };
+        return $controller->runValidate($data, $rules);
+    }
+
+    public function test_required_field_accepts_zero(): void
+    {
+        $this->assertArrayNotHasKey('qty', $this->validate(['qty' => 0], ['qty' => 'required|numeric']));
+        $this->assertArrayNotHasKey('qty', $this->validate(['qty' => '0'], ['qty' => 'required|numeric']));
+    }
+
+    public function test_optional_field_skips_rules_when_empty(): void
+    {
+        $this->assertArrayNotHasKey('email', $this->validate(['email' => ''], ['email' => 'email']));
+        $this->assertArrayNotHasKey('notes', $this->validate([], ['notes' => 'min:5|max:100']));
     }
 
     public function test_required_field_validates(): void

@@ -24,10 +24,10 @@ class SampleTest extends BaseModel
             LEFT JOIN methods m ON t.method_id = m.id
             LEFT JOIN units u ON t.unit_id = u.id
             LEFT JOIN users ua ON st.assigned_to = ua.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
-            WHERE st.sample_id = ?
+            WHERE st.sample_id = ? AND st.deleted_at IS NULL
             ORDER BY t.test_code
         ");
         $stmt->execute([$sampleId]);
@@ -56,12 +56,12 @@ class SampleTest extends BaseModel
     public static function pendingCount(): int
     {
         $db = \App\Helpers\Database::connect();
-        return (int)$db->query("SELECT COUNT(*) FROM sample_tests WHERE status = 'Pending'")->fetchColumn();
+        return (int)$db->query("SELECT COUNT(*) FROM sample_tests WHERE status = 'Pending' AND deleted_at IS NULL")->fetchColumn();
     }
 
     public static function inProgressCount(): int
     {
         $db = \App\Helpers\Database::connect();
-        return (int)$db->query("SELECT COUNT(*) FROM sample_tests WHERE status = 'In Progress'")->fetchColumn();
+        return (int)$db->query("SELECT COUNT(*) FROM sample_tests WHERE status = 'In Progress' AND deleted_at IS NULL")->fetchColumn();
     }
 }

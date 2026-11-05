@@ -15,9 +15,10 @@ class ApiToken extends BaseModel
 
         $data = [
             'user_id' => $userId,
-            'name' => $name,
+            'token_name' => $name,
             'token_hash' => $hash,
             'permissions' => json_encode($permissions),
+            'is_active' => 't',
             'expires_at' => date('Y-m-d H:i:s', strtotime('+1 year')),
         ];
 
@@ -36,6 +37,7 @@ class ApiToken extends BaseModel
         $stmt = $db->prepare("
             SELECT * FROM " . static::$table . "
             WHERE token_hash = ?
+              AND is_active = TRUE
               AND (expires_at IS NULL OR expires_at > NOW())
         ");
         $stmt->execute([$hash]);

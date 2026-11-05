@@ -59,6 +59,7 @@ class ImportInstrumentFile extends Job
             ]);
             \notify($userId, 'instrument_import', 'Instrument Import Failed',
                 "{$originalName}: " . $e->getMessage(), '/instruments/results');
+            throw $e;
         }
     }
 }

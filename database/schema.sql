@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS sap_sync_logs (
 CREATE TABLE IF NOT EXISTS sap_config (
     id SERIAL PRIMARY KEY,
     config_key VARCHAR(100) UNIQUE NOT NULL,
-    config_value TEXT NOT NULL,
+    config_value TEXT,
     is_encrypted BOOLEAN DEFAULT FALSE,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

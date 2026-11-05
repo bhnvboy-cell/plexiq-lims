@@ -47,7 +47,11 @@ CREATE INDEX IF NOT EXISTS idx_deviations_status ON deviations(status);
 CREATE INDEX IF NOT EXISTS idx_eln_entries_created ON eln_entries(created_at);
 CREATE INDEX IF NOT EXISTS idx_calibration_records_instrument_date ON calibration_records(instrument_id, calibration_date);
 CREATE INDEX IF NOT EXISTS idx_environmental_readings_point_created ON environmental_readings(point_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook_created ON webhook_logs(webhook_id, created_at);
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'webhook_logs') THEN
+        CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook_created ON webhook_logs(webhook_id, created_at);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status);
 CREATE INDEX IF NOT EXISTS idx_stability_studies_status_created ON stability_studies(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_results_sample_revision ON results(sample_test_id, revision);

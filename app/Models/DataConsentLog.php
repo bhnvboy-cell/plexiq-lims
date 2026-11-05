@@ -6,5 +6,5 @@ use App\BaseModel;
 
 class DataConsentLog extends BaseModel
 {
-    protected static string $table = 'data_consent_logs';
+    protected static string $table = 'consent_logs';
 }

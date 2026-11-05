@@ -161,6 +161,24 @@ class RouterTest extends TestCase
         $this->assertStringContainsString('419', $output ?? '');
     }
 
+    public function test_csrf_returns_json_when_ajax_or_json_accept(): void
+    {
+        $this->router->post('/secure-ajax', fn() => 'should not reach');
+
+        $_POST['_csrf_token'] = 'wrong-token';
+        $_SESSION['_csrf_token'] = 'correct-token';
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
+
+        ob_start();
+        $this->router->dispatch('POST', '/secure-ajax');
+        $output = ob_get_clean();
+        unset($_SERVER['HTTP_X_REQUESTED_WITH']);
+
+        $decoded = json_decode($output ?? '', true);
+        $this->assertIsArray($decoded);
+        $this->assertEquals('CSRF token mismatch', $decoded['error'] ?? null);
+    }
+
     public function test_middleware_runs_before_handler(): void
     {
         $middlewareRan = false;
@@ -216,6 +234,76 @@ class RouterTest extends TestCase
         $output = ob_get_clean();
 
         $this->assertEquals('dashboard', $output);
+    }
+
+    public function test_all_registered_web_and_api_routes_have_valid_controller_methods_and_parameter_counts(): void
+    {
+        $router = new Router();
+        require BASE_PATH . '/routes/web.php';
+        require BASE_PATH . '/routes/api.php';
+
+        $ref = new \ReflectionProperty(Router::class, 'routes');
+        $ref->setAccessible(true);
+        $routes = $ref->getValue($router);
+
+        $this->assertNotEmpty($routes);
+
+        foreach ($routes as $route) {
+            $handler = $route['handler'];
+            $pattern = $route['pattern'];
+            $httpMethod = $route['method'];
+
+            if (is_array($handler)) {
+                [$class, $method] = $handler;
+                $this->assertTrue(
+                    class_exists($class),
+                    "Route [$httpMethod $pattern] references non-existent controller class $class"
+                );
+                $this->assertTrue(
+                    method_exists($class, $method),
+                    "Route [$httpMethod $pattern] references non-existent method $class::$method()"
+                );
+
+                $refMethod = new \ReflectionMethod($class, $method);
+                $requiredParams = $refMethod->getNumberOfRequiredParameters();
+                preg_match_all('/\(\?P<\w+>/', $pattern, $paramMatches);
+                $routeParamCount = count($paramMatches[0]);
+
+                $this->assertLessThanOrEqual(
+                    $routeParamCount,
+                    $requiredParams,
+                    "Route [$httpMethod $pattern] provides $routeParamCount params, but $class::$method() requires $requiredParams"
+                );
+            } else {
+                $this->assertTrue(
+                    is_callable($handler),
+                    "Route [$httpMethod $pattern] handler is not callable"
+                );
+            }
+        }
+    }
+
+    public function test_all_controller_rendered_views_exist_on_disk(): void
+    {
+        $controllerFiles = array_merge(
+            glob(BASE_PATH . '/app/Controllers/*.php') ?: [],
+            glob(BASE_PATH . '/app/Controllers/Api/*.php') ?: []
+        );
+
+        $this->assertNotEmpty($controllerFiles);
+
+        foreach ($controllerFiles as $file) {
+            $content = file_get_contents($file);
+            if (preg_match_all('/\$this->render\(\s*[\'"]([a-zA-Z0-9_.-]+)[\'"]/', $content, $matches)) {
+                foreach ($matches[1] as $viewName) {
+                    $viewPath = BASE_PATH . '/resources/views/' . str_replace('.', '/', $viewName) . '.php';
+                    $this->assertFileExists(
+                        $viewPath,
+                        "Controller " . basename($file) . " renders missing view '$viewName' ($viewPath)"
+                    );
+                }
+            }
+        }
     }
 
     /**

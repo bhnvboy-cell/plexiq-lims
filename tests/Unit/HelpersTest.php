@@ -61,6 +61,28 @@ class HelpersTest extends TestCase
         $this->assertStringContainsString($token, $field);
     }
 
+    public function test_csrf_validate_keeps_token_stable_and_accepts_header(): void
+    {
+        $token = csrf_token();
+        $_POST['_csrf_token'] = $token;
+        $this->assertTrue(csrf_validate());
+        $this->assertEquals($token, csrf_token(), 'CSRF token should remain stable across validations in the same session');
+
+        unset($_POST['_csrf_token']);
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = $token;
+        $this->assertTrue(csrf_validate());
+        unset($_SERVER['HTTP_X_CSRF_TOKEN']);
+    }
+
+    public function test_pg_bool_formats_booleans_for_postgres(): void
+    {
+        $this->assertNull(pg_bool(null));
+        $this->assertEquals('t', pg_bool(true));
+        $this->assertEquals('f', pg_bool(false));
+        $this->assertEquals('t', pg_bool(1));
+        $this->assertEquals('f', pg_bool(0));
+    }
+
     public function test_session_flash_stores_and_retrieves(): void
     {
         session_flash('success', 'Operation completed');

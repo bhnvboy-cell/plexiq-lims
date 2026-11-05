@@ -6,5 +6,5 @@ use App\BaseModel;
 
 class SavedFilter extends BaseModel
 {
-    protected static string $table = 'saved_filters';
+    protected static string $table = 'dashboard_filters';
 }

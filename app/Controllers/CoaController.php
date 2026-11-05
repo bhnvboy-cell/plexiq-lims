@@ -107,7 +107,7 @@ class CoaController extends BaseController
         $db = \App\Helpers\Database::connect();
 
         $stmt = $db->prepare("
-            SELECT cd.*, s.sample_code, s.batch_number, s.manufacture_date, s.expiry_date,
+            SELECT cd.*, s.customer_id, s.sample_code, s.batch_number, s.manufacture_date, s.expiry_date,
                    s.received_date, s.status AS sample_status,
                    c.customer_name, c.customer_code, c.address AS customer_address,
                    p.product_name, p.product_code,
@@ -121,14 +121,26 @@ class CoaController extends BaseController
             LEFT JOIN users ru ON s.reviewed_by = ru.id
             LEFT JOIN users au ON s.approved_by = au.id
             LEFT JOIN users cou ON s.coa_released_by = cou.id
-            WHERE cd.id = ? AND cd.deleted_at IS NULL
+            WHERE (cd.id = ? OR cd.sample_id = ?) AND cd.deleted_at IS NULL
+            ORDER BY cd.id DESC
+            LIMIT 1
         ");
-        $stmt->execute([$id]);
+        $stmt->execute([$id, $id]);
         $document = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$document) {
             session_flash('error', 'COA document not found.');
             redirect('/coa');
+        }
+
+        if (Auth::role() === 'Customer') {
+            $user = Auth::user();
+            $custStmt = $db->prepare("SELECT id FROM customers WHERE email = ? AND is_active = TRUE");
+            $custStmt->execute([$user['email'] ?? '']);
+            $cust = $custStmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$cust || (int)$document['customer_id'] !== (int)$cust['id']) {
+                abort(403, 'Access denied.');
+            }
         }
 
         // Get test results
@@ -141,8 +153,8 @@ class CoaController extends BaseController
             JOIN tests t ON st.test_id = t.id
             LEFT JOIN methods m ON t.method_id = m.id
             LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
             LEFT JOIN users ent ON r.entered_by = ent.id
             WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
@@ -170,8 +182,31 @@ class CoaController extends BaseController
     public function downloadPdf(int $id): void
     {
         Auth::requireAnyRole(['Admin', 'Analyst', 'Reviewer', 'Approver', 'Customer']);
+        $db = \App\Helpers\Database::connect();
+
+        $coaStmt = $db->prepare("
+            SELECT cd.id, cd.status, s.customer_id
+            FROM coa_documents cd
+            JOIN samples s ON cd.sample_id = s.id
+            WHERE (cd.id = ? OR cd.sample_id = ?) AND cd.deleted_at IS NULL
+            ORDER BY cd.id DESC
+            LIMIT 1
+        ");
+        $coaStmt->execute([$id, $id]);
+        $coa = $coaStmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (Auth::role() === 'Customer') {
+            $user = Auth::user();
+            $custStmt = $db->prepare("SELECT id FROM customers WHERE email = ? AND is_active = TRUE");
+            $custStmt->execute([$user['email'] ?? '']);
+            $cust = $custStmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$cust || !$coa || (int)$coa['customer_id'] !== (int)$cust['id']) {
+                abort(403, 'Access denied.');
+            }
+        }
+
         $pdfService = new \App\Services\PdfService();
-        $pdfService->downloadCoa($id);
+        $pdfService->downloadCoa($coa ? (int)$coa['id'] : $id);
     }
 
     public function release(int $id): void

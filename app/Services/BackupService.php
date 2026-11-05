@@ -257,21 +257,35 @@ class BackupService
      */
     private function findBinary(string $configKey, array $candidates): string
     {
-        $configured = (string)config('backup.' . $configKey, '');
-        if ($configured !== '') {
-            $candidates = array_merge([$configured], $candidates);
+        $dbSetting = '';
+        try {
+            $dbSetting = trim($this->setting($configKey, ''));
+        } catch (\Throwable $e) {
+            $dbSetting = '';
+        }
+        $envSetting = trim((string)config('backup.' . $configKey, ''));
+        foreach ([$dbSetting, $envSetting] as $configured) {
+            if ($configured !== '' && $this->isValidPostgresBinary($configured)) {
+                $candidates = array_merge([$configured], $candidates);
+            }
         }
         foreach ($candidates as $candidate) {
-            if (strpbrk($candidate, '/\\') !== false && is_file($candidate)) {
+            if (strpbrk($candidate, '/\\') !== false && is_file($candidate) && $this->isValidPostgresBinary($candidate)) {
                 return $candidate;
             }
-            if (strpbrk($candidate, '/\\') === false && $this->commandExists($candidate)) {
+            if (strpbrk($candidate, '/\\') === false && $this->isValidPostgresBinary($candidate) && $this->commandExists($candidate)) {
                 return $candidate;
             }
         }
         throw new \RuntimeException(
-            'PostgreSQL client binary not found. Install PostgreSQL or set ' . strtoupper(str_replace('_path', '_path', $configKey)) . ' in .env.'
+            'PostgreSQL client binary not found. Install PostgreSQL or set ' . strtoupper($configKey) . ' in .env.'
         );
+    }
+
+    private function isValidPostgresBinary(string $path): bool
+    {
+        $base = strtolower(basename($path));
+        return (bool)preg_match('/^(pg_dump|psql)(\.exe)?$/', $base);
     }
 
     private function commandExists(string $name): bool

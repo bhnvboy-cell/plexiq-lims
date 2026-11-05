@@ -20,20 +20,22 @@ class PluginController extends BaseController
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
+        $pluginName = trim($_POST['plugin_name'] ?? $_POST['name'] ?? '');
         $existing = $db->prepare("SELECT id FROM plugins WHERE plugin_name = ?");
-        $existing->execute([$_POST['name']]);
+        $existing->execute([$pluginName]);
         if ($existing->fetch()) {
             session_flash('error', 'Plugin already installed.');
             $this->redirect('/plugins');
+            return;
         }
         $db->prepare("INSERT INTO plugins (plugin_code, plugin_name, description, version, author, settings, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)")->execute([
-            $_POST['plugin_code'] ?? preg_replace('/[^a-z0-9_]/', '', strtolower($_POST['plugin_name'] ?? 'plugin_' . time())),
-            $_POST['plugin_name'],
+            $_POST['plugin_code'] ?? preg_replace('/[^a-z0-9_]/', '', strtolower($pluginName !== '' ? $pluginName : 'plugin_' . time())),
+            $pluginName,
             $_POST['description'] ?? '',
             $_POST['version'] ?? '1.0.0',
             $_POST['author'] ?? 'Unknown',
             $_POST['settings'] ?? '{}',
-            !empty($_POST['is_active']),
+            !empty($_POST['is_active']) ? 't' : 'f',
         ]);
         $pluginId = $db->lastInsertId();
         Audit::log('Plugin Installed', 'plugins', $pluginId);
@@ -59,7 +61,7 @@ class PluginController extends BaseController
         $stmt->execute([$id]);
         $plugin = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($plugin) {
-            $db->prepare("UPDATE plugins SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$plugin['is_active'], $id]);
+            $db->prepare("UPDATE plugins SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([!$plugin['is_active'] ? 't' : 'f', $id]);
             Audit::log('Plugin Toggled', 'plugins', $id);
             return $this->json(['success' => true]);
         }

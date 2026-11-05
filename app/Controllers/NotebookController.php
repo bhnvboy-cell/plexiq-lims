@@ -77,7 +77,7 @@ class NotebookController extends BaseController
         $entryId = $db->lastInsertId();
         Audit::log('ELN Entry Created', 'eln_entries', $entryId);
         session_flash('success', 'Entry created.');
-        $this->redirect('/notebooks/' . $notebookId);
+        $this->redirect('/notebooks/' . $entryId);
     }
 
     public function show(int $id): string
@@ -143,12 +143,14 @@ class NotebookController extends BaseController
             $_POST['status'] ?? 'Draft',
             $id,
         ]);
-        $stmt = $db->prepare("SELECT notebook_id FROM eln_entries WHERE id = ?");
-        $stmt->execute([$id]);
-        $entry = $stmt->fetch(\PDO::FETCH_ASSOC);
         Audit::log('ELN Entry Updated', 'eln_entries', $id);
         session_flash('success', 'Entry updated.');
-        $this->redirect($entry ? '/notebooks/' . $entry['notebook_id'] : '/notebooks');
+        $this->redirect('/notebooks/' . $id);
+    }
+
+    public function deleteNotebook(int $id): void
+    {
+        $this->deleteEntry($id);
     }
 
     public function deleteEntry(int $id): void

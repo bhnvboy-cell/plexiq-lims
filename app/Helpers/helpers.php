@@ -132,17 +132,33 @@ if (!function_exists('csrf_field')) {
     }
 }
 
+if (!function_exists('csrf_regenerate')) {
+    function csrf_regenerate(): string
+    {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+        return $_SESSION['_csrf_token'];
+    }
+}
+
 if (!function_exists('csrf_validate')) {
     function csrf_validate(): bool
     {
         $token = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         $expected = $_SESSION['_csrf_token'] ?? '';
-        if (empty($token) || empty($expected) || !hash_equals($expected, $token)) {
+        if (empty($token) || empty($expected) || !hash_equals($expected, (string)$token)) {
             return false;
         }
-        // Rotate token after use
-        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
         return true;
+    }
+}
+
+if (!function_exists('pg_bool')) {
+    function pg_bool($val): ?string
+    {
+        if ($val === null) {
+            return null;
+        }
+        return $val ? 't' : 'f';
     }
 }
 

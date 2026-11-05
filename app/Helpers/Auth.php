@@ -67,17 +67,20 @@ class Auth
             return 'invalid';
         }
 
-        // Successful password: clear failure counter
-        $db->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$user['id']]);
-
         // 2FA gate: stage the user, require TOTP before establishing session
+        // Defer resetting failed_login_attempts until 2FA verification succeeds
         if (!empty($user['totp_enabled']) && !empty($user['totp_secret'])) {
-            session_regenerate_id(true);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
             $_SESSION['2fa_pending_user_id'] = (int)$user['id'];
             $_SESSION['2fa_pending_username'] = $user['username'];
             $_SESSION['2fa_attempts'] = 0;
             return '2fa';
         }
+
+        // Successful password (no 2FA): clear failure counter
+        $db->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$user['id']]);
 
         self::completeLogin($user, $username);
         return 'ok';
@@ -100,18 +103,29 @@ class Auth
         }
 
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT u.* FROM users u WHERE u.id = ? AND u.is_active = TRUE");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$user || empty($user['totp_secret']) || empty($user['totp_enabled'])) {
             return false;
         }
 
-        if (!Totp::verify($user['totp_secret'], $code)) {
-            $_SESSION['2fa_attempts'] = ($_SESSION['2fa_attempts'] ?? 0) + 1;
-            \App\Helpers\Audit::log('2FA Failed', 'users', $userId, null, ['username' => $username]);
+        if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+            unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_pending_username'], $_SESSION['2fa_attempts']);
             return false;
         }
+
+        if (!Totp::verify($user['totp_secret'], $code)) {
+            $_SESSION['2fa_attempts'] = ($_SESSION['2fa_attempts'] ?? 0) + 1;
+            self::recordFailedAttempt((int)$userId);
+            \App\Helpers\Audit::log('2FA Failed', 'users', (int)$userId, null, ['username' => $username]);
+            if ($_SESSION['2fa_attempts'] >= 5) {
+                unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_pending_username'], $_SESSION['2fa_attempts']);
+            }
+            return false;
+        }
+
+        $db->prepare("UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?")->execute([$user['id']]);
 
         $stmt = $db->prepare("SELECT r.name as role_name FROM roles r WHERE r.id = ?");
         $stmt->execute([$user['role_id']]);
@@ -126,7 +140,12 @@ class Auth
     private static function completeLogin(array $user, string $username): void
     {
         $db = \App\Helpers\Database::connect();
-        session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        if (function_exists('csrf_regenerate')) {
+            csrf_regenerate();
+        }
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['user_role'] = $user['role_name'];
         $_SESSION['user_name'] = $user['full_name'];
@@ -162,23 +181,36 @@ class Auth
     public static function logout(): void
     {
         if (self::check()) {
-            $db = \App\Helpers\Database::connect();
-            $stmt = $db->prepare('UPDATE login_history SET logout_at = CURRENT_TIMESTAMP WHERE session_id = ? AND logout_at IS NULL');
-            $stmt->execute([session_id()]);
+            try {
+                $db = \App\Helpers\Database::connect();
+                $stmt = $db->prepare('UPDATE login_history SET logout_at = CURRENT_TIMESTAMP WHERE session_id = ? AND logout_at IS NULL');
+                $stmt->execute([session_id()]);
 
-            \App\Helpers\Audit::log('Logout', 'users', self::id(), null, ['username' => $_SESSION['user_username'] ?? '']);
+                \App\Helpers\Audit::log('Logout', 'users', self::id(), null, ['username' => $_SESSION['user_username'] ?? '']);
+            } catch (\Throwable $e) {
+                if (!defined('TESTING') || !TESTING) {
+                    error_log('Logout DB error: ' . $e->getMessage());
+                }
+            }
         }
         $_SESSION = [];
-        if (ini_get('session.use_cookies')) {
+        if (ini_get('session.use_cookies') && !headers_sent()) {
             setcookie(session_name(), '', time() - 42000, '/');
         }
-        session_destroy();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
     }
 
     public static function requireAuth(): void
     {
         if (!self::check()) {
-            $_SESSION['_redirect_after_login'] = $_SERVER['REQUEST_URI'];
+            $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
+            if (is_string($reqUri) && str_starts_with($reqUri, '/') && !str_starts_with($reqUri, '//')) {
+                $_SESSION['_redirect_after_login'] = $reqUri;
+            } else {
+                $_SESSION['_redirect_after_login'] = '/dashboard';
+            }
             redirect('/login');
         }
     }

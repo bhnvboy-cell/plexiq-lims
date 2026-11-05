@@ -74,15 +74,25 @@ echo '[' . date('Y-m-d H:i:s') . "] Worker exiting\n";
 
 function claim(\PDO $db, string $queue): ?array
 {
+    if ($queue === '' || $queue === 'default' || $queue === 'all') {
+        $queues = ['default', 'webhooks', 'imports'];
+    } else {
+        $queues = array_values(array_filter(array_map('trim', explode(',', $queue))));
+        if (empty($queues)) {
+            $queues = ['default'];
+        }
+    }
+    $placeholders = implode(', ', array_fill(0, count($queues), '?'));
+
     $db->beginTransaction();
     $stmt = $db->prepare(
         "SELECT * FROM jobs
-         WHERE status = 'pending' AND queue = ? AND available_at <= CURRENT_TIMESTAMP
+         WHERE status = 'pending' AND queue IN ({$placeholders}) AND available_at <= CURRENT_TIMESTAMP
          ORDER BY id ASC
          LIMIT 1
          FOR UPDATE SKIP LOCKED"
     );
-    $stmt->execute([$queue]);
+    $stmt->execute($queues);
     $job = $stmt->fetch(\PDO::FETCH_ASSOC);
     if (!$job) {
         $db->rollBack();

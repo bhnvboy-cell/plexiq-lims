@@ -120,7 +120,8 @@ class InstrumentImportService
                 INSERT INTO results (sample_test_id, result_value, result_text, is_within_spec, entered_by, remarks)
                 VALUES (?, ?, ?, ?, ?, 'Auto-imported from instrument')
             ");
-            $insertResult->execute([$match['id'], $value, $text, $isWithinSpec, $ir['imported_by']]);
+            $withinSpecParam = $isWithinSpec === null ? null : ($isWithinSpec ? 't' : 'f');
+            $insertResult->execute([$match['id'], $value, $text, $withinSpecParam, $ir['imported_by']]);
 
             // Update sample_test status
             $db->prepare("UPDATE sample_tests SET status = 'Completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?")

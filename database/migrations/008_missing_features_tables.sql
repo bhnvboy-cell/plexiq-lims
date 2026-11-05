@@ -612,7 +612,8 @@ CREATE TABLE IF NOT EXISTS calibration_records (
 
 -- Seed default language
 INSERT INTO languages (language_code, language_name, is_default, is_active) 
-VALUES ('en', 'English', TRUE, TRUE);
+VALUES ('en', 'English', TRUE, TRUE)
+ON CONFLICT (language_code) DO NOTHING;
 
 -- Seed default notification templates
 INSERT INTO notification_templates (template_code, template_name, subject, body_html) VALUES
@@ -622,17 +623,22 @@ INSERT INTO notification_templates (template_code, template_name, subject, body_
 ('calibration_due', 'Calibration Due', 'Calibration Due: [[INSTRUMENT_NAME]]', '<h2>Calibration Due</h2><p>Instrument: [[INSTRUMENT_NAME]]<br>Due Date: [[DUE_DATE]]</p>'),
 ('sample_registered', 'New Sample Registered', 'Sample [[SAMPLE_CODE]] Registered', '<h2>New Sample Registered</h2><p>Sample Code: [[SAMPLE_CODE]]<br>Product: [[PRODUCT_NAME]]<br>Customer: [[CUSTOMER_NAME]]</p>'),
 ('training_assigned', 'Training Assigned', 'Training Assigned: [[COURSE_NAME]]', '<h2>Training Assigned</h2><p>Course: [[COURSE_NAME]]<br>Due Date: [[DUE_DATE]]<br>Assigned by: [[ASSIGNED_BY]]</p>'),
-('deviation_opened', 'Deviation Recorded', 'Deviation [[DEVIATION_CODE]] - [[SEVERITY]]', '<h2>Deviation Recorded</h2><p>Code: [[DEVIATION_CODE]]<br>Title: [[TITLE]]<br>Severity: [[SEVERITY]]<br>Reported by: [[REPORTED_BY]]</p>');
+('deviation_opened', 'Deviation Recorded', 'Deviation [[DEVIATION_CODE]] - [[SEVERITY]]', '<h2>Deviation Recorded</h2><p>Code: [[DEVIATION_CODE]]<br>Title: [[TITLE]]<br>Severity: [[SEVERITY]]<br>Reported by: [[REPORTED_BY]]</p>')
+ON CONFLICT (template_code) DO NOTHING;
 
 -- Seed default notification subscriptions for admin user
 INSERT INTO notification_subscriptions (user_id, notification_type)
-SELECT id, 'test_approved' FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Admin');
+SELECT id, 'test_approved' FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Admin')
+ON CONFLICT (user_id, notification_type) DO NOTHING;
 INSERT INTO notification_subscriptions (user_id, notification_type)
-SELECT id, 'oos_created' FROM users WHERE role_id IN (SELECT id FROM roles WHERE name IN ('Admin', 'Reviewer'));
+SELECT id, 'oos_created' FROM users WHERE role_id IN (SELECT id FROM roles WHERE name IN ('Admin', 'Reviewer'))
+ON CONFLICT (user_id, notification_type) DO NOTHING;
 INSERT INTO notification_subscriptions (user_id, notification_type)
-SELECT id, 'calibration_due' FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Admin');
+SELECT id, 'calibration_due' FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'Admin')
+ON CONFLICT (user_id, notification_type) DO NOTHING;
 INSERT INTO notification_subscriptions (user_id, notification_type)
-SELECT id, 'deviation_opened' FROM users WHERE role_id IN (SELECT id FROM roles WHERE name IN ('Admin', 'Reviewer'));
+SELECT id, 'deviation_opened' FROM users WHERE role_id IN (SELECT id FROM roles WHERE name IN ('Admin', 'Reviewer'))
+ON CONFLICT (user_id, notification_type) DO NOTHING;
 
 -- Seed default data retention policies
 INSERT INTO data_retention_policies (entity_type, retention_days, action_on_expiry) VALUES
@@ -641,7 +647,8 @@ INSERT INTO data_retention_policies (entity_type, retention_days, action_on_expi
 ('login_history', 365, 'Delete'),
 ('notifications', 365, 'Delete'),
 ('barcode_scan_logs', 730, 'Archive'),
-('env_monitoring_readings', 1095, 'Archive');
+('env_monitoring_readings', 1095, 'Archive')
+ON CONFLICT DO NOTHING;
 
 -- Seed deployment settings
 INSERT INTO deployment_settings (setting_key, setting_value, category) VALUES
@@ -659,4 +666,5 @@ INSERT INTO deployment_settings (setting_key, setting_value, category) VALUES
 ('email_queue_enabled', 'true', 'notifications'),
 ('sso_enabled', 'false', 'authentication'),
 ('multilanguage_enabled', 'true', 'i18n'),
-('default_language', 'en', 'i18n');
+('default_language', 'en', 'i18n')
+ON CONFLICT (setting_key) DO NOTHING;

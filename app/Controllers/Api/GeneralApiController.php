@@ -100,6 +100,72 @@ class GeneralApiController extends BaseController
         }
     }
 
+    public function updateSample(int $id): string
+    {
+        if (!$this->checkPermission('samples.write')) {
+            return $this->json(['error' => 'Forbidden'], 403);
+        }
+        $data = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM samples WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$id]);
+        $existing = $stmt->fetch();
+        if (!$existing) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+
+        $allowed = ['customer_id', 'product_id', 'batch_number', 'sample_type_id', 'priority', 'status', 'storage_location', 'notes'];
+        $sets = [];
+        $params = [];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $data)) {
+                $sets[] = "{$field} = ?";
+                $params[] = $data[$field] !== '' ? $data[$field] : null;
+            }
+        }
+        if (empty($sets)) {
+            return $this->json($existing);
+        }
+        $sets[] = "updated_at = CURRENT_TIMESTAMP";
+        $params[] = $id;
+        $upd = $db->prepare("UPDATE samples SET " . implode(', ', $sets) . " WHERE id = ? RETURNING *");
+        $upd->execute($params);
+        return $this->json($upd->fetch());
+    }
+
+    public function sampleTests(int $id): string
+    {
+        if (!$this->checkPermission('samples.read')) {
+            return $this->json(['error' => 'Forbidden'], 403);
+        }
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM samples WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+        $tests = $db->prepare("
+            SELECT st.*, t.test_name, t.test_code,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                   COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text,
+                   t.unit_id, u.unit_code, u.unit_name,
+                   r.result_value, r.result_text, r.is_within_spec
+            FROM sample_tests st
+            JOIN samples s ON st.sample_id = s.id
+            JOIN tests t ON st.test_id = t.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
+            LEFT JOIN units u ON t.unit_id = u.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
+            )
+            WHERE st.sample_id = ? AND st.deleted_at IS NULL
+            ORDER BY st.id
+        ");
+        $tests->execute([$id]);
+        return $this->json($tests->fetchAll());
+    }
+
     // ============================================================
     // RESULTS API
     // ============================================================
@@ -109,7 +175,7 @@ class GeneralApiController extends BaseController
             return $this->json(['error' => 'Forbidden'], 403);
         }
         $db = Database::connect();
-        $stmt = $db->query("SELECT r.*, st.test_id, t.test_name, t.test_code, s.sample_code FROM results r JOIN sample_tests st ON r.sample_test_id = st.id JOIN tests t ON st.test_id = t.id JOIN samples s ON st.sample_id = s.id ORDER BY r.created_at DESC LIMIT 100");
+        $stmt = $db->query("SELECT r.*, st.test_id, t.test_name, t.test_code, s.sample_code FROM results r JOIN sample_tests st ON r.sample_test_id = st.id JOIN tests t ON st.test_id = t.id JOIN samples s ON st.sample_id = s.id WHERE r.deleted_at IS NULL ORDER BY r.created_at DESC LIMIT 100");
         return $this->json($stmt->fetchAll());
     }
 
@@ -125,10 +191,25 @@ class GeneralApiController extends BaseController
         $db = Database::connect();
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare("SELECT st.*, t.min_spec_limit, t.max_spec_limit, t.spec_limit_text, t.unit_id, u.unit_code FROM sample_tests st JOIN tests t ON st.test_id = t.id LEFT JOIN units u ON t.unit_id = u.id WHERE st.id = ?");
+            $stmt = $db->prepare("
+                SELECT st.*,
+                       COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                       COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                       COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text,
+                       t.unit_id, u.unit_code
+                FROM sample_tests st
+                JOIN samples s ON st.sample_id = s.id
+                JOIN tests t ON st.test_id = t.id
+                LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
+                LEFT JOIN units u ON t.unit_id = u.id
+                WHERE st.id = ? AND st.deleted_at IS NULL
+            ");
             $stmt->execute([$sampleTestId]);
             $st = $stmt->fetch();
-            if (!$st) return $this->json(['error' => 'Sample test not found'], 404);
+            if (!$st) {
+                $db->rollBack();
+                return $this->json(['error' => 'Sample test not found'], 404);
+            }
 
             $isWithinSpec = null;
             $resultValue = $data['result_value'];
@@ -141,7 +222,7 @@ class GeneralApiController extends BaseController
             $insertStmt->execute([
                 $sampleTestId,
                 $resultValue,
-                $isWithinSpec === null ? null : ($isWithinSpec ? true : false),
+                $isWithinSpec === null ? null : ($isWithinSpec ? 't' : 'f'),
                 $_REQUEST['_api_user_id'],
                 $data['remarks'] ?? null,
             ]);
@@ -153,9 +234,76 @@ class GeneralApiController extends BaseController
             $db->commit();
             return $this->json($result, 201);
         } catch (\Exception $e) {
-            $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             return $this->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    // ============================================================
+    // BATCHES & COA API
+    // ============================================================
+    public function batches(): string
+    {
+        if (!$this->checkPermission('samples.read')) {
+            return $this->json(['error' => 'Forbidden'], 403);
+        }
+        $db = Database::connect();
+        $stmt = $db->query("
+            SELECT b.*, p.product_name, p.product_code
+            FROM batches b
+            LEFT JOIN products p ON b.product_id = p.id
+            WHERE b.deleted_at IS NULL
+            ORDER BY b.created_at DESC
+            LIMIT 100
+        ");
+        return $this->json($stmt->fetchAll());
+    }
+
+    public function coa(int $sampleId): string
+    {
+        if (!$this->checkPermission('samples.read') && !$this->checkPermission('results.read')) {
+            return $this->json(['error' => 'Forbidden'], 403);
+        }
+        $db = Database::connect();
+        $stmt = $db->prepare("
+            SELECT cd.*, s.sample_code, s.batch_number, c.customer_name, p.product_name
+            FROM coa_documents cd
+            JOIN samples s ON cd.sample_id = s.id
+            LEFT JOIN customers c ON s.customer_id = c.id
+            LEFT JOIN products p ON s.product_id = p.id
+            WHERE (cd.sample_id = ? OR cd.id = ?) AND cd.deleted_at IS NULL
+            ORDER BY cd.id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$sampleId, $sampleId]);
+        $coa = $stmt->fetch();
+        if (!$coa) {
+            return $this->json(['error' => 'COA not found'], 404);
+        }
+        $tests = $db->prepare("
+            SELECT t.test_name, t.test_code,
+                   COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                   m.method_name, u.unit_code, u.unit_name,
+                   r.result_value, r.result_text, r.is_within_spec
+            FROM sample_tests st
+            JOIN samples s ON st.sample_id = s.id
+            JOIN tests t ON st.test_id = t.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
+            LEFT JOIN methods m ON t.method_id = m.id
+            LEFT JOIN units u ON t.unit_id = u.id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
+            )
+            WHERE st.sample_id = ? AND st.deleted_at IS NULL
+            ORDER BY t.test_code
+        ");
+        $tests->execute([$coa['sample_id']]);
+        $coa['results'] = $tests->fetchAll();
+        return $this->json($coa);
     }
 
     // ============================================================

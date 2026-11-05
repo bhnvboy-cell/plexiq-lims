@@ -39,11 +39,15 @@ class TestResultController extends BaseController
 
         $stmt = $db->prepare("
             SELECT st.*, s.sample_code, s.batch_number, s.batch_id, s.id AS sample_id, t.test_name, t.test_code,
-                   t.min_spec_limit, t.max_spec_limit, t.spec_limit_text, u.unit_code, u.unit_name,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                   COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text,
+                   u.unit_code, u.unit_name,
                    m.method_name
             FROM sample_tests st
             JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
             LEFT JOIN units u ON t.unit_id = u.id
             LEFT JOIN methods m ON t.method_id = m.id
             WHERE st.id = ? AND st.deleted_at IS NULL
@@ -93,15 +97,21 @@ class TestResultController extends BaseController
         $value = $_POST['result_value'] ?? null;
         $text = $_POST['result_text'] ?? null;
         $remarks = $_POST['remarks'] ?? null;
-        $uncertainty = $_POST['uncertainty'] !== '' ? $_POST['uncertainty'] : null;
-        $kFactor = $_POST['k_factor'] !== '' ? $_POST['k_factor'] : null;
-        $confidenceInterval = $_POST['confidence_interval'] ?: null;
-        $replicateCount = $_POST['replicate_count'] !== '' ? (int)$_POST['replicate_count'] : 1;
+        $uncertainty = ($u = $_POST['uncertainty'] ?? '') !== '' ? $u : null;
+        $kFactor = ($kf = $_POST['k_factor'] ?? '') !== '' ? $kf : null;
+        $confidenceInterval = ($ci = $_POST['confidence_interval'] ?? '') !== '' ? $ci : null;
+        $replicateCount = ($rc = $_POST['replicate_count'] ?? '') !== '' ? (int)$rc : 1;
 
         // Get test specs
         $stmt = $db->prepare("
-            SELECT t.*, st.status FROM sample_tests st
+            SELECT t.*, st.status, st.sample_id,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
+                   COALESCE(pt.spec_limit_text, t.spec_limit_text) AS spec_limit_text
+            FROM sample_tests st
+            JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
             WHERE st.id = ? AND st.deleted_at IS NULL
         ");
         $stmt->execute([$sampleTestId]);
@@ -160,6 +170,32 @@ class TestResultController extends BaseController
             // Update sample_test status
             SampleTest::updateStatus($sampleTestId, 'Completed');
 
+            // Auto-create OOS record when result is out of specification
+            if ($isWithinSpec === false) {
+                $oosCheck = $db->prepare("SELECT id FROM oos_records WHERE sample_test_id = ? AND deleted_at IS NULL LIMIT 1");
+                $oosCheck->execute([$sampleTestId]);
+                if (!$oosCheck->fetch()) {
+                    $oosNumber = 'OOS-' . date('Ymd') . '-' . $sampleTestId . '-' . random_int(100, 999);
+                    $specRange = $spec['spec_limit_text'] ?: (($spec['min_spec_limit'] ?? '') . ' - ' . ($spec['max_spec_limit'] ?? ''));
+                    $oosStmt = $db->prepare("
+                        INSERT INTO oos_records (oos_number, sample_id, sample_test_id, result_id, test_parameter, specification_range, result_value, result_text, description, severity, status, initiated_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Major', 'Open', ?)
+                    ");
+                    $oosStmt->execute([
+                        $oosNumber,
+                        $spec['sample_id'] ?? null,
+                        $sampleTestId,
+                        $resultId,
+                        $spec['test_name'] ?? null,
+                        $specRange,
+                        ($value !== null && $value !== '') ? (float)$value : null,
+                        $text,
+                        'Auto-generated OOS from out-of-specification result entry',
+                        Auth::id(),
+                    ]);
+                }
+            }
+
             // Update sample status if needed
             $sampleStmt = $db->prepare("
                 UPDATE samples SET status = 'In Progress', updated_at = CURRENT_TIMESTAMP
@@ -194,7 +230,9 @@ class TestResultController extends BaseController
         $db = \App\Helpers\Database::connect();
 
         $stmt = $db->query("
-            SELECT st.*, s.sample_code, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit,
+            SELECT st.*, s.sample_code, t.test_name, t.test_code,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
                    r.result_value, r.result_text, r.is_within_spec, r.id AS result_id,
                    r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count,
                    u.full_name AS entered_by_name, ue.full_name AS assigned_to_name,
@@ -202,8 +240,9 @@ class TestResultController extends BaseController
             FROM sample_tests st
             JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
             LEFT JOIN users u ON r.entered_by = u.id
             LEFT JOIN users ue ON st.assigned_to = ue.id
@@ -238,7 +277,7 @@ class TestResultController extends BaseController
             $stmt->execute([$sampleTestId]);
             $sampleId = $stmt->fetchColumn();
             if ($sampleId) {
-                $pending = $db->prepare("SELECT COUNT(*) FROM sample_tests WHERE sample_id = ? AND status NOT IN ('Reviewed', 'Approved')");
+                $pending = $db->prepare("SELECT COUNT(*) FROM sample_tests WHERE sample_id = ? AND deleted_at IS NULL AND status NOT IN ('Reviewed', 'Approved')");
                 $pending->execute([$sampleId]);
                 if ((int)$pending->fetchColumn() === 0) {
                     $db->prepare("UPDATE samples SET status = 'Reviewed', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -264,7 +303,9 @@ class TestResultController extends BaseController
         $db = \App\Helpers\Database::connect();
 
         $stmt = $db->query("
-            SELECT st.*, s.sample_code, t.test_name, t.test_code, t.min_spec_limit, t.max_spec_limit,
+            SELECT st.*, s.sample_code, t.test_name, t.test_code,
+                   COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
+                   COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
                    r.result_value, r.result_text, r.is_within_spec, r.id AS result_id,
                    r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count,
                    u.full_name AS entered_by_name, ru.full_name AS reviewed_by_name,
@@ -272,8 +313,9 @@ class TestResultController extends BaseController
             FROM sample_tests st
             JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id
+            LEFT JOIN products_tests pt ON pt.product_id = s.product_id AND pt.test_id = st.test_id
+            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
+                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
             )
             LEFT JOIN users u ON r.entered_by = u.id
             LEFT JOIN users ru ON r.reviewed_by = ru.id
@@ -307,7 +349,7 @@ class TestResultController extends BaseController
                 WHERE id = (SELECT sample_id FROM sample_tests WHERE id = ?)
                 AND NOT EXISTS (
                     SELECT 1 FROM sample_tests st2
-                    WHERE st2.sample_id = samples.id AND st2.status NOT IN ('Approved', 'Reviewed')
+                    WHERE st2.sample_id = samples.id AND st2.deleted_at IS NULL AND st2.status != 'Approved'
                 )
                 AND status != 'Approved'
             ");

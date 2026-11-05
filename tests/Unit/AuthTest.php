@@ -83,10 +83,6 @@ class AuthTest extends TestCase
 
     public function test_logout_clears_session_and_destroys(): void
     {
-        if (getenv('SKIP_DB_TESTS')) {
-            $this->markTestSkipped('Auth::logout requires database');
-        }
-
         $_SESSION['user_id'] = 1;
         $_SESSION['user_role'] = 'Admin';
 
@@ -97,10 +93,6 @@ class AuthTest extends TestCase
 
     public function test_logout_does_not_crash_when_not_logged_in(): void
     {
-        if (getenv('SKIP_DB_TESTS')) {
-            $this->markTestSkipped('Auth::logout requires database');
-        }
-
         $_SESSION = ['random' => 'data'];
         Auth::logout();
         $this->assertEmpty($_SESSION);

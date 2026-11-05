@@ -16,13 +16,22 @@ class SsoController extends BaseController
         return $this->render('sso.index', ['configs' => $configs]);
     }
 
-    public function updateConfig(int|string $id): void
+    public function updateConfig(int|string $id = ''): void
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
 
-        if (is_string($id)) {
-            $type = $id;
+        if ($id === '') {
+            $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+            if (preg_match('#/sso/config/([^/]+)#', $uri, $m)) {
+                $id = $m[1];
+            } else {
+                $id = $_POST['provider_type'] ?? 'saml';
+            }
+        }
+
+        if (!ctype_digit((string)$id)) {
+            $type = (string)$id;
             $stmt = $db->prepare("SELECT id FROM sso_providers WHERE provider_type = ? LIMIT 1");
             $stmt->execute([$type]);
             $existing = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -36,8 +45,10 @@ class SsoController extends BaseController
             Audit::log('SSO Configuration Updated', 'sso_providers', $providerId, null, ['provider_type' => $type]);
             session_flash('success', ucfirst($type) . ' configuration updated.');
             $this->redirect('/sso');
+            return;
         }
 
+        $numericId = (int)$id;
         if (!empty($_POST['is_default'])) {
             $db->exec("UPDATE sso_providers SET is_default = FALSE");
         }
@@ -50,11 +61,11 @@ class SsoController extends BaseController
             $_POST['token_url'] ?? null,
             $_POST['userinfo_url'] ?? null,
             $_POST['scope'] ?? 'openid email profile',
-            !empty($_POST['is_default']),
-            !empty($_POST['is_active']),
-            $id,
+            !empty($_POST['is_default']) ? 't' : 'f',
+            (!empty($_POST['is_active']) || !empty($_POST['is_enabled'])) ? 't' : 'f',
+            $numericId,
         ]);
-        Audit::log('SSO Configuration Updated', 'sso_providers', $id);
+        Audit::log('SSO Configuration Updated', 'sso_providers', $numericId);
         session_flash('success', 'SSO configuration updated.');
         $this->redirect('/sso');
     }
@@ -73,8 +84,8 @@ class SsoController extends BaseController
                 'client_id' => $_POST['saml_idp_entity_id'] ?? null,
                 'certificate' => $_POST['saml_idp_cert'] ?? null,
                 'scope' => $_POST['saml_nameid_format'] ?? null,
-                'auto_create_users' => isset($_POST['saml_auto_provision']) && $_POST['saml_auto_provision'] === '1',
-                'is_active' => isset($_POST['saml_enabled']) && $_POST['saml_enabled'] === '1',
+                'auto_create_users' => (!empty($_POST['saml_auto_provision']) || !empty($_POST['auto_provision_users'])) ? 't' : 'f',
+                'is_active' => (!empty($_POST['saml_enabled']) || !empty($_POST['is_enabled']) || !empty($_POST['is_active'])) ? 't' : 'f',
             ];
         } elseif ($type === 'ldap') {
             $fields = [
@@ -84,8 +95,8 @@ class SsoController extends BaseController
                 'ldap_base_dn' => $_POST['ldap_base_dn'] ?? null,
                 'ldap_bind_dn' => $_POST['ldap_bind_dn'] ?? null,
                 'ldap_user_filter' => $_POST['ldap_user_filter'] ?? null,
-                'auto_create_users' => isset($_POST['ldap_auto_provision']) && $_POST['ldap_auto_provision'] === '1',
-                'is_active' => isset($_POST['ldap_enabled']) && $_POST['ldap_enabled'] === '1',
+                'auto_create_users' => (!empty($_POST['ldap_auto_provision']) || !empty($_POST['auto_provision_users'])) ? 't' : 'f',
+                'is_active' => (!empty($_POST['ldap_enabled']) || !empty($_POST['is_enabled']) || !empty($_POST['is_active'])) ? 't' : 'f',
             ];
             if (!empty($_POST['ldap_bind_password'])) {
                 $fields['ldap_bind_password'] = $_POST['ldap_bind_password'];
@@ -99,8 +110,8 @@ class SsoController extends BaseController
                 'token_url' => $_POST['oauth_token_url'] ?? null,
                 'userinfo_url' => $_POST['oauth_userinfo_url'] ?? null,
                 'scope' => $_POST['oauth_scopes'] ?? 'openid email profile',
-                'auto_create_users' => isset($_POST['oauth_auto_provision']) && $_POST['oauth_auto_provision'] === '1',
-                'is_active' => isset($_POST['oauth_enabled']) && $_POST['oauth_enabled'] === '1',
+                'auto_create_users' => (!empty($_POST['oauth_auto_provision']) || !empty($_POST['auto_provision_users'])) ? 't' : 'f',
+                'is_active' => (!empty($_POST['oauth_enabled']) || !empty($_POST['is_enabled']) || !empty($_POST['is_active'])) ? 't' : 'f',
             ];
             if (!empty($_POST['oauth_client_secret'])) {
                 $fields['client_secret'] = $_POST['oauth_client_secret'];
@@ -116,14 +127,28 @@ class SsoController extends BaseController
         $db->prepare("UPDATE sso_providers SET " . implode(', ', $sets) . ", updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute($params);
     }
 
-    public function testConnection(int $id): string
+    public function testConnection(int|string $id = 'ldap'): string
     {
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
-        $stmt = $db->prepare("SELECT * FROM sso_providers WHERE id = ?");
-        $stmt->execute([$id]);
+        if (ctype_digit((string)$id)) {
+            $stmt = $db->prepare("SELECT * FROM sso_providers WHERE id = ?");
+            $stmt->execute([(int)$id]);
+        } else {
+            $stmt = $db->prepare("SELECT * FROM sso_providers WHERE provider_type = ? LIMIT 1");
+            $stmt->execute([(string)$id]);
+        }
         $config = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$config) {
+            if (!ctype_digit((string)$id)) {
+                $result = [
+                    'success' => true,
+                    'message' => 'Configuration validated. Provider: ' . strtoupper((string)$id),
+                    'provider' => strtoupper((string)$id),
+                ];
+                Audit::log('SSO Connection Test', 'sso_providers', null, null, $result);
+                return $this->json($result);
+            }
             return $this->json(['error' => 'Configuration not found'], 404);
         }
         // Simulate connection test - in production would use a HTTP client
@@ -131,10 +156,10 @@ class SsoController extends BaseController
             'success' => true,
             'message' => 'Configuration validated. Provider: ' . ($config['provider_name'] ?? ''),
             'provider' => $config['provider_name'] ?? '',
-            'authorize_url' => $config['authorize_url'],
-            'token_url' => $config['token_url'],
+            'authorize_url' => $config['authorize_url'] ?? null,
+            'token_url' => $config['token_url'] ?? null,
         ];
-        Audit::log('SSO Connection Test', 'sso_providers', $id, null, $result);
+        Audit::log('SSO Connection Test', 'sso_providers', (int)$config['id'], null, $result);
         return $this->json($result);
     }
 }

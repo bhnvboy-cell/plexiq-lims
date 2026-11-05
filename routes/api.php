@@ -23,8 +23,12 @@ $router->get('/api/status', [\App\Controllers\Api\GeneralApiController::class, '
 $router->get('/api/samples', [\App\Controllers\Api\GeneralApiController::class, 'listSamples'], ['api']);
 $router->get('/api/samples/{id}', [\App\Controllers\Api\GeneralApiController::class, 'getSample'], ['api']);
 $router->post('/api/samples', [\App\Controllers\Api\GeneralApiController::class, 'createSample'], ['api']);
+$router->put('/api/samples/{id}', [\App\Controllers\Api\GeneralApiController::class, 'updateSample'], ['api']);
+$router->get('/api/samples/{id}/tests', [\App\Controllers\Api\GeneralApiController::class, 'sampleTests'], ['api']);
 $router->get('/api/results', [\App\Controllers\Api\GeneralApiController::class, 'listResults'], ['api']);
 $router->post('/api/results/{sampleTestId}', [\App\Controllers\Api\GeneralApiController::class, 'submitResult'], ['api']);
+$router->get('/api/batches', [\App\Controllers\Api\GeneralApiController::class, 'batches'], ['api']);
+$router->get('/api/coa/{sampleId}', [\App\Controllers\Api\GeneralApiController::class, 'coa'], ['api']);
 $router->get('/api/products', [\App\Controllers\Api\GeneralApiController::class, 'listProducts'], ['api']);
 $router->get('/api/customers', [\App\Controllers\Api\GeneralApiController::class, 'listCustomers'], ['api']);
 $router->get('/api/notifications', [\App\Controllers\Api\GeneralApiController::class, 'myNotifications'], ['api']);

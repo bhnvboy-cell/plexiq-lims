@@ -89,11 +89,12 @@ class SapApiService
                 INSERT INTO results (sample_test_id, result_value, result_text, is_within_spec, entered_by, remarks)
                 VALUES (?, ?, ?, ?, 1, ?) RETURNING id
             ");
+            $withinSpecParam = $isWithinSpec === null ? null : ($isWithinSpec ? 't' : 'f');
             $stmt->execute([
                 $st['id'],
                 $value,
                 $data['resultText'] ?? null,
-                $isWithinSpec,
+                $withinSpecParam,
                 $data['remarks'] ?? 'API entry from SAP HANA',
             ]);
 
@@ -139,7 +140,10 @@ class SapApiService
         $stmt = $this->db->prepare("
             SELECT u.*, r.name as role_name FROM users u
             JOIN roles r ON u.role_id = r.id
-            WHERE u.username = ? AND u.is_active = TRUE
+            WHERE u.username = ?
+              AND u.is_active = TRUE
+              AND (u.locked_until IS NULL OR u.locked_until <= CURRENT_TIMESTAMP)
+              AND r.name IN ('Admin', 'Lab Manager', 'Analyst', 'Reviewer', 'Approver')
         ");
         $stmt->execute([$username]);
         $user = $stmt->fetch(\PDO::FETCH_ASSOC);

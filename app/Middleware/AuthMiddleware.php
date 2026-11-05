@@ -7,9 +7,13 @@ class AuthMiddleware
     public static function handle(): bool
     {
         if (!\App\Helpers\Auth::check()) {
-            $_SESSION['_redirect_after_login'] = $_SERVER['REQUEST_URI'];
+            $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
+            if (is_string($reqUri) && str_starts_with($reqUri, '/') && !str_starts_with($reqUri, '//')) {
+                $_SESSION['_redirect_after_login'] = $reqUri;
+            } else {
+                $_SESSION['_redirect_after_login'] = '/dashboard';
+            }
             header('Location: /login', true, 302);
-            echo view('auth.login');
             return false;
         }
         return true;

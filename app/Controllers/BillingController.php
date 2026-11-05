@@ -51,16 +51,20 @@ class BillingController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
+        $subtotal = (float)($_POST['subtotal'] ?? 0);
+        $taxAmount = (float)($_POST['tax_amount'] ?? 0);
+        $discountAmount = (float)($_POST['discount_amount'] ?? 0);
+        $totalAmount = ($_POST['total_amount'] ?? '') !== '' ? (float)$_POST['total_amount'] : ($subtotal + $taxAmount - $discountAmount);
         $db->prepare("INSERT INTO invoices (invoice_number, customer_id, sample_id, invoice_date, due_date, subtotal, tax_amount, discount_amount, total_amount, notes, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")->execute([
-            $_POST['invoice_number'] ?? 'INV-' . time(),
+            ($_POST['invoice_number'] ?? '') !== '' ? $_POST['invoice_number'] : 'INV-' . time(),
             $_POST['customer_id'],
-            $_POST['sample_id'] ?? null,
-            $_POST['invoice_date'] ?? date('Y-m-d'),
-            $_POST['due_date'] ?? null,
-            $_POST['subtotal'] ?? 0,
-            $_POST['tax_amount'] ?? 0,
-            $_POST['discount_amount'] ?? 0,
-            $_POST['total_amount'] ?? 0,
+            ($_POST['sample_id'] ?? '') ?: null,
+            ($_POST['invoice_date'] ?? '') ?: date('Y-m-d'),
+            ($_POST['due_date'] ?? '') ?: null,
+            $subtotal,
+            $taxAmount,
+            $discountAmount,
+            $totalAmount,
             $_POST['notes'] ?? null,
             'Draft',
             Auth::id(),
@@ -125,16 +129,20 @@ class BillingController extends BaseController
     {
         Auth::requireAuth();
         $db = \App\Helpers\Database::connect();
+        $subtotal = (float)($_POST['subtotal'] ?? 0);
+        $taxAmount = (float)($_POST['tax_amount'] ?? 0);
+        $discountAmount = (float)($_POST['discount_amount'] ?? 0);
+        $totalAmount = ($_POST['total_amount'] ?? '') !== '' ? (float)$_POST['total_amount'] : ($subtotal + $taxAmount - $discountAmount);
         $db->prepare("UPDATE invoices SET invoice_number = ?, customer_id = ?, sample_id = ?, invoice_date = ?, due_date = ?, subtotal = ?, tax_amount = ?, discount_amount = ?, total_amount = ?, notes = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([
             $_POST['invoice_number'],
             $_POST['customer_id'],
-            $_POST['sample_id'] ?? null,
-            $_POST['invoice_date'] ?? date('Y-m-d'),
-            $_POST['due_date'] ?? null,
-            $_POST['subtotal'] ?? 0,
-            $_POST['tax_amount'] ?? 0,
-            $_POST['discount_amount'] ?? 0,
-            $_POST['total_amount'] ?? 0,
+            ($_POST['sample_id'] ?? '') ?: null,
+            ($_POST['invoice_date'] ?? '') ?: date('Y-m-d'),
+            ($_POST['due_date'] ?? '') ?: null,
+            $subtotal,
+            $taxAmount,
+            $discountAmount,
+            $totalAmount,
             $_POST['notes'] ?? null,
             $_POST['status'] ?? 'Draft',
             $id,
@@ -144,18 +152,8 @@ class BillingController extends BaseController
         $this->redirect('/billing/' . $id);
     }
 
-    public function addItem(int $id): void
+    private function recalculateInvoiceTotals(\PDO $db, int $id): void
     {
-        Auth::requireAuth();
-        $db = \App\Helpers\Database::connect();
-        $db->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)")->execute([
-            $id,
-            $_POST['description'],
-            $_POST['quantity'] ?? 1,
-            $_POST['unit_price'] ?? 0,
-            ($_POST['quantity'] ?? 1) * ($_POST['unit_price'] ?? 0),
-        ]);
-        // Recalculate invoice totals (honoring the stored discount)
         $stmt = $db->prepare("SELECT tax_amount, discount_amount FROM invoices WHERE id = ?");
         $stmt->execute([$id]);
         $inv = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -164,15 +162,29 @@ class BillingController extends BaseController
         $stmt->execute([$id]);
         $subtotal = (float)($stmt->fetchColumn() ?: 0);
 
-        // Discount stored as a flat amount on the invoice.
         $discountAmount = min((float)($inv['discount_amount'] ?? 0), $subtotal);
-        // Tax: if a rate is posted, apply it to the discounted subtotal; otherwise keep stored tax amount.
         $postedRate = (float)($_POST['tax_rate'] ?? 0);
         $taxAmount = $postedRate > 0
             ? ($subtotal - $discountAmount) * ($postedRate / 100)
             : (float)($inv['tax_amount'] ?? 0);
-        $total = $subtotal - $discountAmount + $taxAmount;
+        $total = $subtotal + $taxAmount - $discountAmount;
         $db->prepare("UPDATE invoices SET subtotal = ?, discount_amount = ?, tax_amount = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")->execute([$subtotal, $discountAmount, $taxAmount, $total, $id]);
+    }
+
+    public function addItem(int $id): void
+    {
+        Auth::requireAuth();
+        $db = \App\Helpers\Database::connect();
+        $qty = (float)($_POST['quantity'] ?? 1);
+        $unitPrice = (float)($_POST['unit_price'] ?? 0);
+        $db->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)")->execute([
+            $id,
+            $_POST['description'],
+            $qty,
+            $unitPrice,
+            $qty * $unitPrice,
+        ]);
+        $this->recalculateInvoiceTotals($db, $id);
         Audit::log('Invoice Item Added', 'invoice_items', null, null, ['invoice_id' => $id]);
         session_flash('success', 'Item added to invoice.');
         $this->redirect('/billing/' . $id);
