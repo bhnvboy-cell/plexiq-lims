@@ -408,7 +408,39 @@ class CoaService
             ORDER BY t.test_code
         ");
         $stmt->execute([$sampleId]);
-        return $stmt->fetchAll();
+        $legacyResults = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Unified: Also retrieve analysis parameters (e.g. from instrument auto-import or direct parameter entry)
+        $sapStmt = $db->prepare("
+            SELECT ap.parameter_name AS test_name, ap.parameter_code AS test_code,
+                   COALESCE(ap.specification_text, CASE WHEN sap.spec_min IS NOT NULL AND sap.spec_max IS NOT NULL THEN sap.spec_min::text || ' - ' || sap.spec_max::text ELSE '' END) AS spec_limit_text,
+                   sap.spec_min AS min_spec_limit, sap.spec_max AS max_spec_limit,
+                   ap.method AS method_name, COALESCE(sap.unit, ap.unit) AS unit_code, COALESCE(sap.unit, ap.unit) AS unit_name,
+                   sap.result_value, sap.result_text, sap.is_within_spec, NULL AS uncertainty, NULL AS k_factor, NULL AS confidence_interval,
+                   ent.full_name AS entered_by_name
+            FROM sample_analysis_parameters sap
+            JOIN analysis_parameters ap ON sap.parameter_id = ap.id
+            LEFT JOIN users ent ON sap.entered_by = ent.id
+            WHERE sap.sample_id = ? AND sap.status IN ('Completed', 'Reviewed', 'Approved')
+            ORDER BY ap.parameter_code
+        ");
+        $sapStmt->execute([$sampleId]);
+        $sapResults = $sapStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $seenCodes = [];
+        $combined = [];
+        foreach ($legacyResults as $row) {
+            $code = $row['test_code'] ?? '';
+            $seenCodes[$code] = true;
+            $combined[] = $row;
+        }
+        foreach ($sapResults as $row) {
+            $code = $row['test_code'] ?? '';
+            if (!isset($seenCodes[$code])) {
+                $combined[] = $row;
+            }
+        }
+        return $combined;
     }
 
     protected function renderInlineQrSvg(string $data): string

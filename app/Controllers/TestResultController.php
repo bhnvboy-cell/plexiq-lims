@@ -81,11 +81,14 @@ class TestResultController extends BaseController
             $revisions = Result::getRevisions($existingResult['id']);
         }
 
+        $instruments = $db->query("SELECT id, instrument_code, instrument_name, next_calibration_date FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(\PDO::FETCH_ASSOC);
+
         return $this->render('tests.result-entry', [
             'test' => $test,
             'result' => $existingResult,
             'revisions' => $revisions,
             'nextTestId' => $nextTest,
+            'instruments' => $instruments,
         ]);
     }
 
@@ -101,6 +104,44 @@ class TestResultController extends BaseController
         $kFactor = ($kf = $_POST['k_factor'] ?? '') !== '' ? $kf : null;
         $confidenceInterval = ($ci = $_POST['confidence_interval'] ?? '') !== '' ? $ci : null;
         $replicateCount = ($rc = $_POST['replicate_count'] ?? '') !== '' ? (int)$rc : 1;
+        $instrumentId = ($inst = $_POST['instrument_id'] ?? '') !== '' ? (int)$inst : null;
+
+        // Commercial LIMS: Statistical Replicate Calculation Engine (Mean, SD, %RSD)
+        $replicatesRaw = trim($_POST['replicates_raw'] ?? '');
+        if ($replicatesRaw !== '') {
+            $parts = array_filter(array_map('trim', preg_split('/[,;\s]+/', $replicatesRaw)), 'is_numeric');
+            if (count($parts) >= 2) {
+                $nums = array_map('floatval', $parts);
+                $replicateCount = count($nums);
+                $mean = array_sum($nums) / $replicateCount;
+                $sumSq = 0;
+                foreach ($nums as $n) {
+                    $sumSq += pow($n - $mean, 2);
+                }
+                $sd = sqrt($sumSq / ($replicateCount - 1));
+                $rsd = ($mean != 0) ? abs(($sd / $mean) * 100) : 0;
+                $uncertainty = round($sd * ($kFactor ? (float)$kFactor : 2.0), 4);
+                if ($value === null || $value === '') {
+                    $value = round($mean, 4);
+                }
+                $statRemark = sprintf("Replicates (n=%d): [%s] | Mean=%.4f | SD=%.4f | %%RSD=%.2f%%", $replicateCount, implode(', ', $nums), $mean, $sd, $rsd);
+                $remarks = $remarks ? ($remarks . " | " . $statRemark) : $statRemark;
+            }
+        }
+
+        // Commercial LIMS: ISO 17025 Instrument Calibration Gating
+        if ($instrumentId) {
+            $instStmt = $db->prepare("SELECT instrument_name, next_calibration_date FROM instruments WHERE id = ?");
+            $instStmt->execute([$instrumentId]);
+            $instRow = $instStmt->fetch(\PDO::FETCH_ASSOC);
+            if ($instRow && !empty($instRow['next_calibration_date'])) {
+                if (strtotime($instRow['next_calibration_date']) < strtotime(date('Y-m-d'))) {
+                    session_flash('error', "Compliance Gate: Instrument '{$instRow['instrument_name']}' has an expired calibration (due: {$instRow['next_calibration_date']}). Cannot be used for testing.");
+                    redirect('/tests/' . $sampleTestId . '/result');
+                    return;
+                }
+            }
+        }
 
         // Get test specs
         $stmt = $db->prepare("
@@ -152,18 +193,18 @@ class TestResultController extends BaseController
                     UPDATE results SET result_value = ?, result_text = ?, is_within_spec = ?,
                         entered_by = ?, entered_at = CURRENT_TIMESTAMP, remarks = ?,
                         uncertainty = ?, k_factor = ?, confidence_interval = ?, replicate_count = ?,
-                        revision = ?, updated_at = CURRENT_TIMESTAMP
+                        instrument_id = ?, revision = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                $stmt->execute([$value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision, $resultId]);
+                $stmt->execute([$value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $instrumentId, $revision, $resultId]);
             } else {
                 // Create new result
                 $stmt = $db->prepare("
                     INSERT INTO results (sample_test_id, result_value, result_text, is_within_spec, entered_by, remarks,
-                        uncertainty, k_factor, confidence_interval, replicate_count, revision)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+                        uncertainty, k_factor, confidence_interval, replicate_count, instrument_id, revision)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
                 ");
-                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $revision]);
+                $stmt->execute([$sampleTestId, $value, $text, $isWithinSpecParam, Auth::id(), $remarks, $uncertainty, $kFactor, $confidenceInterval, $replicateCount, $instrumentId, $revision]);
                 $resultId = (int)$stmt->fetchColumn();
             }
 
@@ -262,11 +303,19 @@ class TestResultController extends BaseController
         $action = $_POST['action'] ?? 'reject';
         $remarks = $_POST['remarks'] ?? '';
 
+        $result = Result::findBySampleTest($sampleTestId);
+
+        // Compliance Gate: Segregation of Duties (4-Eyes Principle)
+        if ($action === 'approve' && $result && (int)$result['entered_by'] === (int)Auth::id() && Auth::role() !== 'Admin') {
+            session_flash('error', 'Segregation of duties violation: An analyst cannot review their own test result (4-eyes principle).');
+            redirect('/tests/review');
+            return;
+        }
+
         if ($action === 'approve') {
             SampleTest::updateStatus($sampleTestId, 'Reviewed');
 
             // Update result
-            $result = Result::findBySampleTest($sampleTestId);
             if ($result) {
                 $stmt = $db->prepare("UPDATE results SET reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
                 $stmt->execute([Auth::id(), $result['id']]);
@@ -334,26 +383,46 @@ class TestResultController extends BaseController
         $db = \App\Helpers\Database::connect();
         $action = $_POST['action'] ?? 'reject';
 
+        $result = Result::findBySampleTest($sampleTestId);
+
+        // Compliance Gate: Segregation of Duties (4-Eyes Principle)
+        if ($action === 'approve' && $result && ((int)$result['entered_by'] === (int)Auth::id() || (int)$result['reviewed_by'] === (int)Auth::id()) && Auth::role() !== 'Admin') {
+            session_flash('error', 'Segregation of duties violation: Approver cannot be the same user who entered or reviewed this result.');
+            redirect('/tests/final-approval');
+            return;
+        }
+
         if ($action === 'approve') {
             SampleTest::updateStatus($sampleTestId, 'Approved');
 
-            $result = Result::findBySampleTest($sampleTestId);
             if ($result) {
                 $stmt = $db->prepare("UPDATE results SET approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
                 $stmt->execute([Auth::id(), $result['id']]);
             }
 
-            // Update sample to Approved if all tests approved
-            $stmt = $db->prepare("
-                UPDATE samples SET status = 'Approved', approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE id = (SELECT sample_id FROM sample_tests WHERE id = ?)
-                AND NOT EXISTS (
-                    SELECT 1 FROM sample_tests st2
-                    WHERE st2.sample_id = samples.id AND st2.deleted_at IS NULL AND st2.status != 'Approved'
-                )
-                AND status != 'Approved'
-            ");
-            $stmt->execute([Auth::id(), $sampleTestId]);
+            // Check if all tests are approved AND no open OOS records exist before promoting Sample to Approved
+            $stmtSample = $db->prepare("SELECT sample_id FROM sample_tests WHERE id = ?");
+            $stmtSample->execute([$sampleTestId]);
+            $sampleId = $stmtSample->fetchColumn();
+
+            if ($sampleId) {
+                $checkOos = $db->prepare("SELECT COUNT(*) FROM oos_records WHERE sample_id = ? AND status != 'Closed' AND deleted_at IS NULL");
+                $checkOos->execute([$sampleId]);
+                $openOos = (int)$checkOos->fetchColumn();
+
+                if ($openOos === 0) {
+                    $stmt = $db->prepare("
+                        UPDATE samples SET status = 'Approved', approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        AND NOT EXISTS (
+                            SELECT 1 FROM sample_tests st2
+                            WHERE st2.sample_id = samples.id AND st2.deleted_at IS NULL AND st2.status != 'Approved'
+                        )
+                        AND status != 'Approved'
+                    ");
+                    $stmt->execute([Auth::id(), $sampleId]);
+                }
+            }
 
             Audit::log('Result Final Approved', 'results', $result['id'] ?? null);
             session_flash('success', 'Result approved.');

@@ -238,6 +238,17 @@ class SampleController extends BaseController
             redirect('/samples/' . $id);
         }
 
+        // Compliance Gate: Do not allow Sample to be Approved or COA Released if an unresolved OOS investigation exists
+        if (in_array($newStatus, ['Approved', 'COA Released'], true)) {
+            $checkOos = $db->prepare("SELECT COUNT(*) FROM oos_records WHERE sample_id = ? AND status != 'Closed' AND deleted_at IS NULL");
+            $checkOos->execute([$id]);
+            if ((int)$checkOos->fetchColumn() > 0) {
+                session_flash('error', 'Compliance Gate: Cannot approve sample or release COA while open Out-Of-Specification (OOS) investigations exist.');
+                redirect('/samples/' . $id);
+                return;
+            }
+        }
+
         $updateSql = "UPDATE samples SET status = ?, updated_at = CURRENT_TIMESTAMP";
 
         switch ($newStatus) {

@@ -69,6 +69,15 @@ class CoaController extends BaseController
             redirect('/samples/' . $sampleId);
         }
 
+        // Compliance Gate: Check for open OOS before generating COA
+        $checkOos = $db->prepare("SELECT COUNT(*) FROM oos_records WHERE sample_id = ? AND status != 'Closed' AND deleted_at IS NULL");
+        $checkOos->execute([$sampleId]);
+        if ((int)$checkOos->fetchColumn() > 0) {
+            session_flash('error', 'Compliance Gate: Cannot generate COA while an open OOS investigation exists for this sample.');
+            redirect('/samples/' . $sampleId);
+            return;
+        }
+
         $db->beginTransaction();
         try {
             $docNumber = CoaDocument::generateNumber();
@@ -143,32 +152,15 @@ class CoaController extends BaseController
             }
         }
 
-        // Get test results
-        $testStmt = $db->prepare("
-            SELECT t.test_name, t.test_code, t.spec_limit_text, t.min_spec_limit, t.max_spec_limit,
-                   m.method_name, u.unit_code, u.unit_name,
-                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor,
-                   ent.full_name AS entered_by_name
-            FROM sample_tests st
-            JOIN tests t ON st.test_id = t.id
-            LEFT JOIN methods m ON t.method_id = m.id
-            LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
-            )
-            LEFT JOIN users ent ON r.entered_by = ent.id
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
-            ORDER BY t.test_code
-        ");
-        $testStmt->execute([$document['sample_id']]);
-        $results = $testStmt->fetchAll();
+        // Get unified test results (sample_tests + sample_analysis_parameters)
+        $coaService = new \App\Services\CoaService();
+        $results = $coaService->getResultsData($document['sample_id']);
 
         // Get COA HTML
         $template = CoaTemplate::getDefault();
         $coaHtml = '';
 
         if ($template) {
-            $coaService = new \App\Services\CoaService();
             $coaHtml = $coaService->render($template['template_html'], $document, $results, $template);
         }
 
@@ -213,6 +205,19 @@ class CoaController extends BaseController
     {
         Auth::requireAnyRole(['Admin', 'Approver']);
         $db = \App\Helpers\Database::connect();
+
+        // Compliance Gate: Check for open OOS before releasing COA
+        $checkOos = $db->prepare("
+            SELECT COUNT(*) FROM oos_records o
+            JOIN coa_documents cd ON cd.sample_id = o.sample_id
+            WHERE cd.id = ? AND o.status != 'Closed' AND o.deleted_at IS NULL
+        ");
+        $checkOos->execute([$id]);
+        if ((int)$checkOos->fetchColumn() > 0) {
+            session_flash('error', 'Compliance Gate: Cannot release COA while an open OOS investigation exists.');
+            redirect('/coa');
+            return;
+        }
 
         $stmt = $db->prepare("UPDATE coa_documents SET status = 'Released', released_by = ?, released_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
         $stmt->execute([Auth::id(), $id]);

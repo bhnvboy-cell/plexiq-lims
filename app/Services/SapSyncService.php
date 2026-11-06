@@ -139,9 +139,26 @@ class SapSyncService
             LIMIT 50
         ");
         $results = $stmt->fetchAll();
+
+        // Also include approved sample_analysis_parameters
+        $sapStmt = $this->db->query("
+            SELECT sap.id, s.sample_code, ap.parameter_code AS test_code,
+                   sap.result_value, sap.result_text, sap.is_within_spec, sap.approved_at,
+                   sap.created_at
+            FROM sample_analysis_parameters sap
+            JOIN samples s ON sap.sample_id = s.id
+            JOIN analysis_parameters ap ON sap.parameter_id = ap.id
+            WHERE sap.status = 'Approved' AND sap.approved_at IS NOT NULL
+            AND sap.created_at > COALESCE((SELECT NULLIF(config_value, '')::timestamp FROM sap_config WHERE config_key = 'sap_last_sync_at'), '1970-01-01'::timestamp)
+            ORDER BY sap.created_at ASC
+            LIMIT 50
+        ");
+        $sapResults = $sapStmt->fetchAll();
+
+        $allResults = array_merge($results, $sapResults);
         $count = 0;
 
-        foreach ($results as $result) {
+        foreach ($allResults as $result) {
             try {
                 $payload = [
                     'sampleCode' => $result['sample_code'],

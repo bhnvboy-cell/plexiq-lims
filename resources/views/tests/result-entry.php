@@ -26,9 +26,49 @@
             <div class="card-body">
                 <form method="POST" action="/tests/<?= $test['id'] ?>/result">
                     <?= csrf_field() ?>
+
+                    <!-- Instrument Calibration Gating (ISO 17025) -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-cpu"></i> Test Instrument</label>
+                        <select name="instrument_id" id="instrumentSelect" class="form-select">
+                            <option value="">— Select Laboratory Instrument (Optional) —</option>
+                            <?php foreach (($instruments ?? []) as $inst): ?>
+                                <?php
+                                    $isCalibrated = true;
+                                    $calLabel = 'Calibrated';
+                                    if (!empty($inst['next_calibration_date'])) {
+                                        if (strtotime($inst['next_calibration_date']) < strtotime(date('Y-m-d'))) {
+                                            $isCalibrated = false;
+                                            $calLabel = 'EXPIRED CAL: ' . $inst['next_calibration_date'];
+                                        } else {
+                                            $calLabel = 'Cal valid until ' . $inst['next_calibration_date'];
+                                        }
+                                    }
+                                ?>
+                                <option value="<?= $inst['id'] ?>" <?= ((int)($result['instrument_id'] ?? 0) === (int)$inst['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($inst['instrument_name']) ?> (<?= htmlspecialchars($inst['instrument_code']) ?>) [<?= $calLabel ?>]
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Instruments with overdue calibrations will be gated according to ISO 17025 compliance.</small>
+                    </div>
+
+                    <!-- Multi-Replicate Statistical Calculator -->
+                    <div class="card mb-3 bg-light border-0">
+                        <div class="card-body p-3">
+                            <label class="form-label fw-bold"><i class="bi bi-calculator"></i> Replicate Measurements &amp; %RSD Calculator</label>
+                            <div class="input-group mb-2">
+                                <input type="text" id="replicatesRaw" name="replicates_raw" class="form-control" placeholder="e.g. 10.12, 10.15, 10.14">
+                                <button type="button" class="btn btn-outline-secondary" onclick="calcReplicates()">Calculate Stats</button>
+                            </div>
+                            <small class="text-muted d-block mb-1">Enter comma- or space-separated values to auto-compute Mean, SD, and %RSD.</small>
+                            <div id="replicateStats" class="small text-primary fw-bold" style="display:none;"></div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Result Value (<?= htmlspecialchars($test['unit_code'] ?? '') ?>)</label>
-                        <input type="number" step="any" name="result_value" class="form-control form-control-lg"
+                        <input type="number" step="any" name="result_value" id="resultValue" class="form-control form-control-lg"
                                value="<?= htmlspecialchars((string)($result['result_value'] ?? '')) ?>"
                                <?= $test['unit_code'] === '%' || $test['min_spec_limit'] !== null ? '' : 'disabled' ?>>
                         <small class="text-muted">Enter numeric value for quantitative tests</small>
@@ -119,4 +159,31 @@
     </div>
 </div>
 <?php endif; ?>
+
+<script>
+function calcReplicates() {
+    const raw = document.getElementById('replicatesRaw').value.trim();
+    if (!raw) return;
+    const nums = raw.split(/[,;\s]+/).map(parseFloat).filter(n => !isNaN(n));
+    if (nums.length < 2) {
+        alert('Please enter at least 2 numeric values.');
+        return;
+    }
+    const n = nums.length;
+    const mean = nums.reduce((a, b) => a + b, 0) / n;
+    const variance = nums.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (n - 1);
+    const sd = Math.sqrt(variance);
+    const rsd = mean !== 0 ? Math.abs((sd / mean) * 100) : 0;
+    
+    document.getElementById('resultValue').value = mean.toFixed(4);
+    const repCountInput = document.querySelector('input[name="replicate_count"]');
+    if (repCountInput) repCountInput.value = n;
+    const uncInput = document.querySelector('input[name="uncertainty"]');
+    if (uncInput) uncInput.value = (sd * 2.0).toFixed(4);
+
+    const statsDiv = document.getElementById('replicateStats');
+    statsDiv.style.display = 'block';
+    statsDiv.innerHTML = `<i class="bi bi-check-circle"></i> Calculated (n=${n}): Mean = ${mean.toFixed(4)}, SD = ${sd.toFixed(4)}, %RSD = ${rsd.toFixed(2)}% (Auto-filled)`;
+}
+</script>
 <?php $content = ob_get_clean(); require __DIR__ . '/../layouts/app.php'; ?>

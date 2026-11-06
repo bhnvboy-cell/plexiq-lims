@@ -34,25 +34,11 @@ class PdfService
             exit;
         }
 
-        // Get test results
-        $testStmt = $db->prepare("
-            SELECT t.test_name, t.spec_limit_text, m.method_name, u.unit_code,
-                   r.result_value, r.result_text, r.is_within_spec, r.uncertainty, r.k_factor
-            FROM sample_tests st
-            JOIN tests t ON st.test_id = t.id
-            LEFT JOIN methods m ON t.method_id = m.id
-            LEFT JOIN units u ON t.unit_id = u.id
-            LEFT JOIN results r ON r.sample_test_id = st.id AND r.deleted_at IS NULL AND r.revision = (
-                SELECT MAX(r2.revision) FROM results r2 WHERE r2.sample_test_id = st.id AND r2.deleted_at IS NULL
-            )
-            WHERE st.sample_id = ? AND st.status IN ('Completed', 'Reviewed', 'Approved') AND st.deleted_at IS NULL
-            ORDER BY t.test_code
-        ");
-        $testStmt->execute([$document['sample_id']]);
-        $results = $testStmt->fetchAll();
+        // Get unified test results
+        $coaService = new CoaService();
+        $results = $coaService->getResultsData($document['sample_id']);
 
         // Use TCPDF-based COA PDF generation
-        $coaService = new CoaService();
         $db2 = \App\Helpers\Database::connect();
         $tplStmt = $db2->prepare("SELECT * FROM coa_templates WHERE id = ?");
         $tplStmt->execute([$document['template_id']]);
