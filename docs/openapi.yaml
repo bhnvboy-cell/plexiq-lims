@@ -280,6 +280,56 @@ paths:
       responses:
         '200':
           description: Rendered label payload
+  /api/uncertainty/calculate:
+    post:
+      summary: Calculate ISO 17025 combined and expanded measurement uncertainty
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                k_factor:
+                  type: number
+                  example: 2.0
+                components:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Combined and expanded uncertainty
+  /api/stability/regression/evaluate:
+    post:
+      summary: Perform ICH Q1E linear regression and predict shelf-life against specification limits
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lower_spec_limit:
+                  type: number
+                upper_spec_limit:
+                  type: number
+                data:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      month:
+                        type: number
+                      value:
+                        type: number
+      responses:
+        '200':
+          description: Regression parameters, 95% confidence intervals, and predicted shelf-life
   /api/results:
     get:
       summary: List test results

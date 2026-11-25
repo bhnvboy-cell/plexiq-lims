@@ -143,6 +143,25 @@ class TestResultController extends BaseController
             }
         }
 
+        // Phase 3: Training Gating - Verify Analyst Qualification on Test Method & Instrument
+        $trainingService = new \App\Services\TrainingGatingService();
+        $analystId = Auth::id() ?? 1;
+        $testIdStmt = $db->prepare("SELECT test_id FROM sample_tests WHERE id = ?");
+        $testIdStmt->execute([$sampleTestId]);
+        $targetTestId = (int)$testIdStmt->fetchColumn();
+
+        if ($targetTestId && !$trainingService->isQualified($analystId, 'test_method', $targetTestId)) {
+            session_flash('error', "Compliance Gate: Analyst is not certified/qualified to execute test method #{$targetTestId}. Complete required training protocol before testing.");
+            redirect('/tests/' . $sampleTestId . '/result');
+            return;
+        }
+
+        if ($instrumentId && !$trainingService->isQualified($analystId, 'instrument', $instrumentId)) {
+            session_flash('error', "Compliance Gate: Analyst is not certified/qualified to operate instrument #{$instrumentId}.");
+            redirect('/tests/' . $sampleTestId . '/result');
+            return;
+        }
+
         // Get test specs
         $stmt = $db->prepare("
             SELECT t.*, st.status, st.sample_id,

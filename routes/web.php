@@ -619,3 +619,37 @@ $router->post('/oot/{id}/review', [\App\Controllers\OotIncidentController::class
 // 5. Industrial Label Printing (ZPL / Brother / Barcode)
 $router->get('/labels/templates', [\App\Controllers\LabelTemplateController::class, 'index'], ['auth']);
 $router->get('/labels/print/{id}', [\App\Controllers\LabelTemplateController::class, 'printSample'], ['auth']);
+
+// ============================================================
+// PHASE 3: QUALITY & REGULATED LIFECYCLE
+// ============================================================
+// 1. Change Control Workflow
+$router->get('/change-controls', [\App\Controllers\ChangeControlController::class, 'index'], ['auth']);
+$router->post('/change-controls', [\App\Controllers\ChangeControlController::class, 'store'], ['auth']);
+$router->post('/change-controls/{id}/pre-approve', [\App\Controllers\ChangeControlController::class, 'preApprove'], ['auth']);
+
+// 2. Customer Complaints
+$router->get('/complaints', [\App\Controllers\CustomerComplaintController::class, 'index'], ['auth']);
+$router->post('/complaints', [\App\Controllers\CustomerComplaintController::class, 'store'], ['auth']);
+
+// 3. FMEA Risk Engine
+$router->get('/fmea', [\App\Controllers\FmeaRiskController::class, 'index'], ['auth']);
+$router->post('/fmea', [\App\Controllers\FmeaRiskController::class, 'store'], ['auth']);
+
+// 4. SOP Document Control & Controlled Copies
+$router->get('/sops', [\App\Controllers\SopController::class, 'index'], ['auth']);
+$router->post('/sops', [\App\Controllers\SopController::class, 'store'], ['auth']);
+$router->post('/sops/{id}/issue-copy', [\App\Controllers\SopController::class, 'issueCopy'], ['auth']);
+
+// 5. ISO 17025 Measurement Uncertainty Budgets
+$router->get('/uncertainty', [\App\Controllers\UncertaintyController::class, 'index'], ['auth']);
+$router->post('/uncertainty', [\App\Controllers\UncertaintyController::class, 'store'], ['auth']);
+$router->post('/uncertainty/calculate', [\App\Controllers\UncertaintyController::class, 'calculate'], ['auth']);
+
+// 6. Instrument Qualifications (DQ/IQ/OQ/PQ)
+$router->get('/instruments/qualifications', [\App\Controllers\InstrumentQualificationController::class, 'index'], ['auth']);
+$router->post('/instruments/qualifications', [\App\Controllers\InstrumentQualificationController::class, 'storeQualification'], ['auth']);
+
+// 7. ICH Q1E Stability Regression & Shelf-Life Forecasting
+$router->get('/stability/regression', [\App\Controllers\StabilityRegressionController::class, 'index'], ['auth']);
+$router->post('/stability/regression/evaluate', [\App\Controllers\StabilityRegressionController::class, 'evaluate'], ['auth']);

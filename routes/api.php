@@ -47,6 +47,10 @@ $router->post('/api/storage/check-out', [\App\Controllers\StorageController::cla
 $router->post('/api/formulas/evaluate', [\App\Controllers\CalculationFormulaController::class, 'testEval'], ['api']);
 $router->get('/api/labels/sample/{id}', [\App\Controllers\LabelTemplateController::class, 'printSample'], ['api']);
 
+// Phase 3: Quality & Regulated Lifecycle API
+$router->post('/api/uncertainty/calculate', [\App\Controllers\UncertaintyController::class, 'calculate'], ['api']);
+$router->post('/api/stability/regression/evaluate', [\App\Controllers\StabilityRegressionController::class, 'evaluate'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================
