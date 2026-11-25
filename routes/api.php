@@ -37,6 +37,16 @@ $router->get('/api/notifications', [\App\Controllers\Api\GeneralApiController::c
 $router->get('/api/notifications/unread', [\App\Controllers\Api\GeneralApiController::class, 'unreadCount'], ['api']);
 $router->get('/api/barcode/lookup', [\App\Controllers\Api\GeneralApiController::class, 'barcodeLookup'], ['api']);
 
+// Phase 2: Core LIMS API
+$router->post('/api/samples/{id}/aliquot', [\App\Controllers\SampleHierarchyController::class, 'aliquot'], ['api']);
+$router->post('/api/samples/composite', [\App\Controllers\SampleHierarchyController::class, 'createComposite'], ['api']);
+$router->get('/api/samples/{id}/genealogy', [\App\Controllers\SampleHierarchyController::class, 'genealogy'], ['api']);
+$router->get('/api/storage/box/{id}', [\App\Controllers\StorageController::class, 'box'], ['api']);
+$router->post('/api/storage/check-in', [\App\Controllers\StorageController::class, 'checkIn'], ['api']);
+$router->post('/api/storage/check-out', [\App\Controllers\StorageController::class, 'checkOut'], ['api']);
+$router->post('/api/formulas/evaluate', [\App\Controllers\CalculationFormulaController::class, 'testEval'], ['api']);
+$router->get('/api/labels/sample/{id}', [\App\Controllers\LabelTemplateController::class, 'printSample'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================

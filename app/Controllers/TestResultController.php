@@ -252,7 +252,21 @@ class TestResultController extends BaseController
                 'is_within_spec' => $isWithinSpec,
             ]);
 
-            session_flash('success', 'Result saved successfully.');
+            // Phase 2: Statistical Out-of-Trend (OOT) Detection
+            $ootMsg = '';
+            if ($value !== null && $value !== '') {
+                try {
+                    $ootService = new \App\Services\OotDetectionService();
+                    $violations = $ootService->evaluateResult($sampleTestId, (float)$value);
+                    if (!empty($violations)) {
+                        $ootMsg = ' [OOT Warning: ' . count($violations) . ' statistical trend rule(s) triggered]';
+                    }
+                } catch (\Throwable $ootEx) {
+                    error_log('OOT evaluation error: ' . $ootEx->getMessage());
+                }
+            }
+
+            session_flash('success', 'Result saved successfully.' . $ootMsg);
         } catch (\Exception $e) {
             $db->rollBack();
             session_flash('error', 'Error saving result: ' . $e->getMessage());
@@ -270,14 +284,20 @@ class TestResultController extends BaseController
         Auth::requireAnyRole(['Admin', 'Reviewer']);
         $db = \App\Helpers\Database::connect();
 
+        $exceptionsOnly = !empty($_GET['exceptions_only']);
+        $exceptionFilter = $exceptionsOnly
+            ? " AND (r.is_within_spec = FALSE OR r.revision > 1 OR EXISTS (SELECT 1 FROM oot_incidents oi WHERE oi.sample_test_id = st.id AND oi.status = 'Open'))"
+            : "";
+
         $stmt = $db->query("
             SELECT st.*, s.sample_code, t.test_name, t.test_code,
                    COALESCE(pt.min_spec_limit, t.min_spec_limit) AS min_spec_limit,
                    COALESCE(pt.max_spec_limit, t.max_spec_limit) AS max_spec_limit,
                    r.result_value, r.result_text, r.is_within_spec, r.id AS result_id,
-                   r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count,
+                   r.uncertainty, r.k_factor, r.confidence_interval, r.replicate_count, r.revision,
                    u.full_name AS entered_by_name, ue.full_name AS assigned_to_name,
-                   c.customer_name, p.product_name
+                   c.customer_name, p.product_name,
+                   (SELECT COUNT(*) FROM oot_incidents oi WHERE oi.sample_test_id = st.id AND oi.status = 'Open') AS oot_count
             FROM sample_tests st
             JOIN samples s ON st.sample_id = s.id
             JOIN tests t ON st.test_id = t.id
@@ -289,11 +309,14 @@ class TestResultController extends BaseController
             LEFT JOIN users ue ON st.assigned_to = ue.id
             LEFT JOIN customers c ON s.customer_id = c.id
             LEFT JOIN products p ON s.product_id = p.id
-            WHERE st.status = 'Completed' AND st.deleted_at IS NULL AND s.deleted_at IS NULL
+            WHERE st.status = 'Completed' AND st.deleted_at IS NULL AND s.deleted_at IS NULL {$exceptionFilter}
             ORDER BY s.priority DESC, r.entered_at ASC
         ");
 
-        return $this->render('tests.review', ['tests' => $stmt->fetchAll()]);
+        return $this->render('tests.review', [
+            'tests' => $stmt->fetchAll(),
+            'exceptionsOnly' => $exceptionsOnly
+        ]);
     }
 
     public function approveResult(int $sampleTestId): void

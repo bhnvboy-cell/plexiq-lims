@@ -592,3 +592,30 @@ $router->post('/stability/timepoints/{id}/start', [\App\Controllers\StabilityCon
 $router->post('/stability/timepoints/{id}/complete', [\App\Controllers\StabilityController::class, 'completeTimepoint'], ['auth']);
 $router->get('/stability/results/{id}', [\App\Controllers\StabilityController::class, 'showResult'], ['auth']);
 $router->post('/suppliers/{id}/qualifications/{qid}', [\App\Controllers\SupplierController::class, 'deleteQualification'], ['auth']);
+
+// ============================================================
+// PHASE 2: CORE LIMS DEPTH
+// ============================================================
+// 1. Sample Hierarchy (Aliquots, Composites & Genealogy)
+$router->post('/samples/{id}/aliquot', [\App\Controllers\SampleHierarchyController::class, 'aliquot'], ['auth']);
+$router->post('/samples/composite', [\App\Controllers\SampleHierarchyController::class, 'createComposite'], ['auth']);
+$router->get('/samples/{id}/genealogy', [\App\Controllers\SampleHierarchyController::class, 'genealogy'], ['auth']);
+
+// 2. Multi-tier Cold-Chain Storage & Box Coordinates
+$router->get('/storage', [\App\Controllers\StorageController::class, 'index'], ['auth']);
+$router->get('/storage/box/{id}', [\App\Controllers\StorageController::class, 'box'], ['auth']);
+$router->post('/storage/check-in', [\App\Controllers\StorageController::class, 'checkIn'], ['auth']);
+$router->post('/storage/check-out', [\App\Controllers\StorageController::class, 'checkOut'], ['auth']);
+
+// 3. Sandboxed Formula Engine
+$router->get('/formulas', [\App\Controllers\CalculationFormulaController::class, 'index'], ['auth']);
+$router->post('/formulas', [\App\Controllers\CalculationFormulaController::class, 'store'], ['auth']);
+$router->post('/formulas/test-eval', [\App\Controllers\CalculationFormulaController::class, 'testEval'], ['auth']);
+
+// 4. Out-of-Trend (OOT) Detection
+$router->get('/oot', [\App\Controllers\OotIncidentController::class, 'index'], ['auth']);
+$router->post('/oot/{id}/review', [\App\Controllers\OotIncidentController::class, 'review'], ['auth']);
+
+// 5. Industrial Label Printing (ZPL / Brother / Barcode)
+$router->get('/labels/templates', [\App\Controllers\LabelTemplateController::class, 'index'], ['auth']);
+$router->get('/labels/print/{id}', [\App\Controllers\LabelTemplateController::class, 'printSample'], ['auth']);

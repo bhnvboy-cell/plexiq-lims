@@ -127,6 +127,159 @@ paths:
       responses:
         '200':
           description: List of assigned tests
+  /api/samples/{id}/aliquot:
+    post:
+      summary: Generate child aliquots from a parent sample
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  example: 3
+                volume:
+                  type: string
+                  example: "5 mL"
+      responses:
+        '200':
+          description: Created aliquots
+  /api/samples/composite:
+    post:
+      summary: Combine multiple source samples into a composite sample
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source_ids:
+                  type: array
+                  items:
+                    type: integer
+                composite_code:
+                  type: string
+      responses:
+        '200':
+          description: Created composite sample
+  /api/samples/{id}/genealogy:
+    get:
+      summary: Retrieve genealogical lineage tree for a sample
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Genealogical lineage tree
+  /api/storage/box/{id}:
+    get:
+      summary: Retrieve 2D storage box well coordinate matrix
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Box layout and occupied slot details
+  /api/storage/check-in:
+    post:
+      summary: Check in sample to a 2D coordinate slot
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sample_id:
+                  type: integer
+                storage_location_id:
+                  type: integer
+                row:
+                  type: integer
+                col:
+                  type: integer
+      responses:
+        '200':
+          description: Sample assigned to coordinate slot
+  /api/storage/check-out:
+    post:
+      summary: Check out sample from storage with required reason
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sample_id:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Sample checked out
+  /api/formulas/evaluate:
+    post:
+      summary: Sandbox evaluate a mathematical formula with variables and ASTM E29 sig-figs
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expression:
+                  type: string
+                variables:
+                  type: object
+                sig_figs:
+                  type: integer
+      responses:
+        '200':
+          description: Calculation result
+  /api/labels/sample/{id}:
+    get:
+      summary: Render industrial print stream (ZPL/TSPL/SVG) for sample label
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rendered label payload
   /api/results:
     get:
       summary: List test results
