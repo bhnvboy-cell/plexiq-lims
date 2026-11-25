@@ -36,12 +36,25 @@ class UserController extends BaseController
         Auth::requireRole('Admin');
         $db = \App\Helpers\Database::connect();
 
-        $password = $_POST['password'] ?? 'welcome123';
+        $password = $_POST['password'] ?? '';
+        if (empty($password)) {
+            session_flash('error', 'Password is required.');
+            redirect('/users/create');
+            return;
+        }
+
+        $policyErrors = Auth::validatePasswordPolicy($password);
+        if (!empty($policyErrors)) {
+            session_flash('error', implode(' ', $policyErrors));
+            redirect('/users/create');
+            return;
+        }
+
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
         $stmt = $db->prepare("
-            INSERT INTO users (username, email, password_hash, full_name, role_id, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (username, email, password_hash, full_name, role_id, is_active, must_change_password)
+            VALUES (?, ?, ?, ?, ?, ?, TRUE)
         ");
         $stmt->execute([
             $_POST['username'],
@@ -53,6 +66,7 @@ class UserController extends BaseController
         ]);
 
         $userId = (int)$db->lastInsertId();
+        Auth::recordPasswordHistory($userId, $hash);
         Audit::log('User Created', 'users', $userId);
         session_flash('success', "User created successfully. Default password: {$password}");
         redirect('/users');
@@ -105,5 +119,22 @@ class UserController extends BaseController
             JOIN users u ON lh.user_id = u.id
         ", [], 50, 'lh.login_at DESC');
         return $this->render('audit.login-history', ['history' => $result['items'], 'paginator' => $result]);
+    }
+
+    public function accessReview(): string
+    {
+        Auth::requireRole('Admin');
+        $db = \App\Helpers\Database::connect();
+
+        $users = $db->query("
+            SELECT u.id, u.username, u.full_name, u.email, u.is_active, u.last_login,
+                   u.password_changed_at, u.failed_login_attempts, u.locked_until,
+                   r.name AS role_name
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            ORDER BY u.is_active DESC, u.last_login DESC NULLS LAST
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        return $this->render('admin.access-review', ['users' => $users]);
     }
 }

@@ -52,13 +52,17 @@ class Router
 
     public function dispatch(string $method, string $uri): void
     {
+        \App\Middleware\SecurityHeadersMiddleware::apply();
+
         $uri = parse_url($uri, PHP_URL_PATH);
         $uri = rtrim($uri, '/') ?: '/';
 
         // CSRF protection for state-changing requests (skip API routes)
         if (in_array($method, ['POST', 'PUT', 'DELETE', 'PATCH']) && !str_starts_with($uri, '/api/')) {
             if (!csrf_validate()) {
-                http_response_code(419);
+                if (!headers_sent()) {
+                    http_response_code(419);
+                }
                 $expectsJson = str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
                     || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
                 if ($expectsJson) {
@@ -99,7 +103,9 @@ class Router
             }
         }
 
-        http_response_code(404);
+        if (!headers_sent()) {
+            http_response_code(404);
+        }
         echo view('errors.404');
     }
 }

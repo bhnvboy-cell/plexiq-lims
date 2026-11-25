@@ -6,6 +6,14 @@ abstract class BaseModel
 {
     protected static string $table;
     protected static string $primaryKey = 'id';
+    protected static bool $audited = true;
+
+    protected static function shouldAudit(string $table): bool
+    {
+        return static::$audited
+            && !str_starts_with($table, 'test_')
+            && !in_array($table, ['audit_logs', 'login_history', 'audit_verifications'], true);
+    }
 
     protected static function getPdo(): \PDO
     {
@@ -54,7 +62,7 @@ abstract class BaseModel
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public static function create(array $data): ?array
+    public static function create(array $data, ?string $reason = null): ?array
     {
         $db = static::getPdo();
         $table = static::validateIdentifier(static::$table);
@@ -66,14 +74,29 @@ abstract class BaseModel
         $stmt = $db->prepare($sql);
         $stmt->execute(static::normalizeValues(array_values($data)));
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if ($result && static::shouldAudit($table)) {
+            $pk = static::$primaryKey;
+            $id = isset($result[$pk]) ? (int)$result[$pk] : null;
+            \App\Helpers\Audit::log('Create', $table, $id, null, $result, $reason);
+        }
+
         return $result ?: null;
     }
 
-    public static function update(int $id, array $data): bool
+    public static function update(int $id, array $data, ?string $reason = null): bool
     {
         $db = static::getPdo();
         $table = static::validateIdentifier(static::$table);
         $pk = static::validateIdentifier(static::$primaryKey);
+
+        $old = null;
+        if (static::shouldAudit($table)) {
+            try {
+                $old = static::find($id);
+            } catch (\Throwable $e) {}
+        }
+
         $sets = implode(', ', array_map(function ($col) {
             $validCol = static::validateIdentifier((string)$col);
             return "{$validCol} = ?";
@@ -82,23 +105,43 @@ abstract class BaseModel
         $stmt = $db->prepare($sql);
         $values = static::normalizeValues(array_values($data));
         $values[] = $id;
-        return $stmt->execute($values);
+        $success = $stmt->execute($values);
+
+        if ($success && static::shouldAudit($table)) {
+            \App\Helpers\Audit::log('Update', $table, $id, $old, $data, $reason);
+        }
+
+        return $success;
     }
 
-    public static function delete(int $id): bool
+    public static function delete(int $id, ?string $reason = null): bool
     {
         $db = static::getPdo();
         $table = static::validateIdentifier(static::$table);
         $pk = static::validateIdentifier(static::$primaryKey);
+
+        $old = null;
+        if (static::shouldAudit($table)) {
+            try {
+                $old = static::find($id);
+            } catch (\Throwable $e) {}
+        }
+
         $stmt = $db->prepare("DELETE FROM {$table} WHERE {$pk} = ?");
-        return $stmt->execute([$id]);
+        $success = $stmt->execute([$id]);
+
+        if ($success && static::shouldAudit($table)) {
+            \App\Helpers\Audit::log('Delete', $table, $id, $old, null, $reason);
+        }
+
+        return $success;
     }
 
     /**
      * Soft delete (sets deleted_at) when the table has the column.
      * Returns false if the column does not exist.
      */
-    public static function softDelete(int $id): bool
+    public static function softDelete(int $id, ?string $reason = null): bool
     {
         $db = static::getPdo();
         $table = static::validateIdentifier(static::$table);
@@ -108,8 +151,22 @@ abstract class BaseModel
         if ((int)$checkStmt->fetchColumn() === 0) {
             return false;
         }
+
+        $old = null;
+        if (static::shouldAudit($table)) {
+            try {
+                $old = static::find($id);
+            } catch (\Throwable $e) {}
+        }
+
         $stmt = $db->prepare("UPDATE {$table} SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE {$pk} = ? AND deleted_at IS NULL");
-        return $stmt->execute([$id]);
+        $success = $stmt->execute([$id]);
+
+        if ($success && static::shouldAudit($table)) {
+            \App\Helpers\Audit::log('Soft Delete', $table, $id, $old, ['deleted_at' => date('Y-m-d H:i:s')], $reason);
+        }
+
+        return $success;
     }
 
     public static function count(): int

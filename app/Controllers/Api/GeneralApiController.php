@@ -386,4 +386,23 @@ class GeneralApiController extends BaseController
 
         return $this->json($results);
     }
+
+    public function health(): string
+    {
+        $dbStatus = 'disconnected';
+        try {
+            $db = Database::connect();
+            $db->query('SELECT 1');
+            $dbStatus = 'connected';
+        } catch (\Throwable $e) {}
+
+        return $this->json([
+            'status' => $dbStatus === 'connected' ? 'healthy' : 'degraded',
+            'database' => $dbStatus,
+            'timestamp' => date('c'),
+            'app' => 'PlexiQ LIMS',
+            'version' => '1.2.0',
+            'php_version' => PHP_VERSION,
+        ]);
+    }
 }

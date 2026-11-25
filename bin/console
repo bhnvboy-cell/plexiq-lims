@@ -88,7 +88,7 @@ switch ($command) {
             }
         }
         $migrationDir = __DIR__ . '/../database/migrations';
-        $files = glob($migrationDir . '/*.sql') ?: [];
+        $files = glob($migrationDir . '/[0-9]*.sql') ?: [];
         sort($files);
         foreach ($files as $file) {
             $name = basename($file);
@@ -190,12 +190,27 @@ switch ($command) {
         echo "Instrument watch scan dispatched {$result['dispatched']} import job(s).\n";
         break;
 
+    case 'audit:verify':
+        echo "Running 21 CFR Part 11 / ALCOA+ Audit Trail Integrity Verification...\n";
+        $issues = \App\Helpers\Audit::verifyChain();
+        if (empty($issues)) {
+            echo "[OK] Audit trail integrity verified: 0 breaks, 0 hash mismatches.\n";
+        } else {
+            echo "[FAIL] Audit trail integrity verification found " . count($issues) . " issue(s):\n";
+            foreach ($issues as $issue) {
+                echo "  - Record ID: {$issue['id']} | Reason: {$issue['reason']}\n";
+            }
+            exit(1);
+        }
+        break;
+
     case 'help':
     default:
         echo "Advanced LIMS Console\n";
         echo "Usage: php bin/console <command>\n\n";
         echo "Commands:\n";
         echo "  migrate        Run database migrations\n";
+        echo "  audit:verify   Verify cryptographic integrity of the audit trail\n";
         echo "  sap:sync       Run SAP HANA scheduled sync\n";
         echo "  key:generate   Generate application encryption key\n";
         echo "  cache:clear    Flush the application cache\n";

@@ -91,6 +91,13 @@ class InstrumentController extends BaseController
             redirect('/instruments/' . $id . '/import');
         }
 
+        $uploadErrors = \App\Helpers\UploadValidator::validate($_FILES['instrument_file'], ['csv', 'xml', 'txt', 'json']);
+        if (!empty($uploadErrors)) {
+            session_flash('error', implode(' ', $uploadErrors));
+            redirect('/instruments/' . $id . '/import');
+            return;
+        }
+
         $file = $_FILES['instrument_file'];
         $format = $instrument['interface_type'];
 

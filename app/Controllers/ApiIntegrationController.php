@@ -68,6 +68,34 @@ class ApiIntegrationController extends BaseController
         $this->redirect('/api-management/tokens');
     }
 
+    public function rotateToken(int $id): string
+    {
+        Auth::requireAuth();
+        $db = \App\Helpers\Database::connect();
+
+        $stmt = $db->prepare("SELECT * FROM api_tokens WHERE id = ? AND user_id = ? AND is_active = TRUE");
+        $stmt->execute([$id, Auth::id()]);
+        $tokenRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$tokenRow) {
+            session_flash('error', 'Token not found or already inactive.');
+            $this->redirect('/api-management/tokens');
+        }
+
+        $newToken = bin2hex(random_bytes(32));
+        $newPrefix = substr($newToken, 0, 10);
+        $newHash = hash('sha256', $newToken);
+        $expiresAt = !empty($tokenRow['expires_at']) ? date('Y-m-d H:i:s', strtotime("+90 days")) : null;
+
+        $db->prepare("
+            UPDATE api_tokens SET token_hash = ?, token_prefix = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND user_id = ?
+        ")->execute([$newHash, $newPrefix, $expiresAt, $id, Auth::id()]);
+
+        Audit::log('API Token Rotated', 'api_tokens', $id, null, ['token_prefix' => $newPrefix]);
+        session_flash('success', 'Token rotated successfully. Please copy your new token below:');
+        return $this->render('api.tokens', ['tokens' => $this->fetchTokens(), 'newToken' => $newToken]);
+    }
+
     public function webhooks(): string
     {
         Auth::requireAuth();

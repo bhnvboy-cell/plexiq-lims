@@ -35,9 +35,9 @@ class ApiTest extends TestCase
         // Create an API token for testing
         $db = $this->db();
         $db->prepare("
-            INSERT INTO api_tokens (token, name, user_id, is_active)
-            VALUES (?, 'Test Token', 1, TRUE)
-        ")->execute([password_hash($this->apiToken, PASSWORD_DEFAULT)]);
+            INSERT INTO api_tokens (token_hash, token_name, token, name, user_id, is_active, permissions)
+            VALUES (?, 'Test Token', ?, 'Test Token', 1, TRUE, '[\"*\"]')
+        ")->execute([hash('sha256', $this->apiToken), password_hash($this->apiToken, PASSWORD_DEFAULT)]);
     }
 
     public function test_api_rejects_requests_without_token(): void
@@ -129,13 +129,13 @@ class ApiTest extends TestCase
 
             // Submit a result
             $db->prepare("
-                INSERT INTO results (sample_test_id, test_id, sample_id, result_value, status, entered_by)
-                VALUES (?, ?, ?, '12.5', 'Completed', 1)
-            ")->execute([$sampleTestId, $testId, $sampleId]);
+                INSERT INTO results (sample_test_id, result_value, entered_by)
+                VALUES (?, 12.5, 1)
+            ")->execute([$sampleTestId]);
 
             $result = $db->query("SELECT * FROM results WHERE sample_test_id = $sampleTestId")->fetch(\PDO::FETCH_ASSOC);
             $this->assertNotNull($result, 'Result should be stored');
-            $this->assertEquals('12.5', $result['result_value']);
+            $this->assertEquals(12.5, (float)$result['result_value']);
         }
     }
 

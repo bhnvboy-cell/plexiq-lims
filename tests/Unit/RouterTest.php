@@ -200,7 +200,9 @@ class RouterTest extends TestCase
     public function test_middleware_can_block_request(): void
     {
         $this->router->addMiddleware('blocker', function () {
-            http_response_code(403);
+            if (!headers_sent()) {
+                http_response_code(403);
+            }
             echo 'Blocked';
             return false;
         });

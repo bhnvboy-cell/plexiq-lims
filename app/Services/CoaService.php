@@ -89,15 +89,27 @@ class CoaService
             $html = str_replace('[[WATERMARK]]', '', $html);
         }
 
-        // Handle [[SIGNATURE_LINE]]
+        // Handle [[SIGNATURE_LINE]] with 21 CFR Part 11 § 11.50 Manifestation
         $reviewedBy = $document['reviewed_by_name'] ?? '';
+        $reviewedDate = $document['reviewed_at'] ?? '';
         $approvedBy = $document['approved_by_name'] ?? '';
+        $approvedDate = $document['approved_at'] ?? '';
         $sigHtml = '';
         if ($reviewedBy) {
-            $sigHtml .= '<div style="margin-top:20px;"><hr style="width:200px;text-align:left;"><strong>' . htmlspecialchars($reviewedBy) . '</strong><br><small>Reviewed</small></div>';
+            $rDateStr = $reviewedDate ? date('Y-m-d H:i:s T', strtotime($reviewedDate)) : date('Y-m-d H:i:s T');
+            $sigHtml .= '<div style="margin-top:20px;border-left:3px solid #0d6efd;padding-left:10px;">';
+            $sigHtml .= '<strong>' . htmlspecialchars($reviewedBy) . '</strong> (Technical Reviewer)<br>';
+            $sigHtml .= '<small style="color:#555;">Meaning: Verified test results for analytical accuracy and compliance with SOPs.</small><br>';
+            $sigHtml .= '<small style="color:#777;">Signed: ' . htmlspecialchars($rDateStr) . ' [21 CFR Part 11 Verified]</small>';
+            $sigHtml .= '</div>';
         }
         if ($approvedBy) {
-            $sigHtml .= '<div style="margin-top:10px;"><hr style="width:200px;text-align:left;"><strong>' . htmlspecialchars($approvedBy) . '</strong><br><small>Approved</small></div>';
+            $aDateStr = $approvedDate ? date('Y-m-d H:i:s T', strtotime($approvedDate)) : date('Y-m-d H:i:s T');
+            $sigHtml .= '<div style="margin-top:15px;border-left:3px solid #198754;padding-left:10px;">';
+            $sigHtml .= '<strong>' . htmlspecialchars($approvedBy) . '</strong> (Final Release Authority)<br>';
+            $sigHtml .= '<small style="color:#555;">Meaning: Authorized the release of this Certificate of Analysis in accordance with specifications.</small><br>';
+            $sigHtml .= '<small style="color:#777;">Signed: ' . htmlspecialchars($aDateStr) . ' [21 CFR Part 11 Verified]</small>';
+            $sigHtml .= '</div>';
         }
         $html = str_replace('[[SIGNATURE_LINE]]', $sigHtml, $html);
 
@@ -350,27 +362,37 @@ class CoaService
             $approvedDate = $document['approved_at'] ?? '';
 
             $signatures = [
-                ['Reviewed by', $reviewedBy, $reviewedDate],
-                ['Approved by', $approvedBy, $approvedDate],
+                [
+                    'role' => 'Technical Reviewer',
+                    'meaning' => 'Verified test results for accuracy and SOP compliance.',
+                    'name' => $reviewedBy,
+                    'timestamp' => $reviewedDate,
+                ],
+                [
+                    'role' => 'Final Release Authority',
+                    'meaning' => 'Authorized release of COA pursuant to specifications.',
+                    'name' => $approvedBy,
+                    'timestamp' => $approvedDate,
+                ],
             ];
 
-            $sigW = min(100, $contentW * 0.45);
+            $sigW = min(100, $contentW * 0.48);
             $sigX = $marginLeft;
 
             foreach ($signatures as $sig) {
-                if (!empty($sig[1])) {
-                    $line = str_repeat('_', 40);
+                if (!empty($sig['name'])) {
                     $pdf->SetX($sigX);
-                    $pdf->Cell($sigW, 5, '', 0, 1);
-                    $pdf->SetX($sigX);
-                    $pdf->Cell($sigW, 0, $line, 0, 1);
+                    $pdf->Cell($sigW, 3, '', 0, 1);
                     $pdf->SetX($sigX);
                     $pdf->SetFont('helvetica', 'B', 9);
-                    $pdf->Cell($sigW, 5, $sig[1], 0, 1);
+                    $pdf->Cell($sigW, 5, $sig['name'] . ' (' . $sig['role'] . ')', 0, 1);
                     $pdf->SetX($sigX);
-                    $pdf->SetFont('helvetica', '', 8);
-                    $label = $sig[0] . ': ' . ($sig[2] ? date('Y-m-d', strtotime($sig[2])) : '');
-                    $pdf->Cell($sigW, 4, $label, 0, 1);
+                    $pdf->SetFont('helvetica', 'I', 7);
+                    $pdf->Cell($sigW, 4, 'Meaning: ' . $sig['meaning'], 0, 1);
+                    $pdf->SetX($sigX);
+                    $pdf->SetFont('helvetica', '', 7);
+                    $ts = $sig['timestamp'] ? date('Y-m-d H:i:s T', strtotime($sig['timestamp'])) : date('Y-m-d H:i:s T');
+                    $pdf->Cell($sigW, 4, 'Signed: ' . $ts . ' [21 CFR Part 11 Verified]', 0, 1);
                 }
             }
         }

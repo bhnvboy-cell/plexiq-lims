@@ -306,7 +306,7 @@ class TestResultController extends BaseController
         $result = Result::findBySampleTest($sampleTestId);
 
         // Compliance Gate: Segregation of Duties (4-Eyes Principle)
-        if ($action === 'approve' && $result && (int)$result['entered_by'] === (int)Auth::id() && Auth::role() !== 'Admin') {
+        if ($action === 'approve' && $result && !Auth::verifySegregationOfDuties('review', $result)) {
             session_flash('error', 'Segregation of duties violation: An analyst cannot review their own test result (4-eyes principle).');
             redirect('/tests/review');
             return;
@@ -386,7 +386,7 @@ class TestResultController extends BaseController
         $result = Result::findBySampleTest($sampleTestId);
 
         // Compliance Gate: Segregation of Duties (4-Eyes Principle)
-        if ($action === 'approve' && $result && ((int)$result['entered_by'] === (int)Auth::id() || (int)$result['reviewed_by'] === (int)Auth::id()) && Auth::role() !== 'Admin') {
+        if ($action === 'approve' && $result && !Auth::verifySegregationOfDuties('approve', $result)) {
             session_flash('error', 'Segregation of duties violation: Approver cannot be the same user who entered or reviewed this result.');
             redirect('/tests/final-approval');
             return;

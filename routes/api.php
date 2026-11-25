@@ -19,6 +19,8 @@ $router->get('/api/sap/status', [SapApiController::class, 'status']);
 // ============================================================
 // GENERAL REST API (Token-Authenticated)
 // ============================================================
+$router->get('/health', [\App\Controllers\Api\GeneralApiController::class, 'health']);
+$router->get('/api/health', [\App\Controllers\Api\GeneralApiController::class, 'health']);
 $router->get('/api/status', [\App\Controllers\Api\GeneralApiController::class, 'status']);
 $router->get('/api/samples', [\App\Controllers\Api\GeneralApiController::class, 'listSamples'], ['api']);
 $router->get('/api/samples/{id}', [\App\Controllers\Api\GeneralApiController::class, 'getSample'], ['api']);
@@ -34,3 +36,12 @@ $router->get('/api/customers', [\App\Controllers\Api\GeneralApiController::class
 $router->get('/api/notifications', [\App\Controllers\Api\GeneralApiController::class, 'myNotifications'], ['api']);
 $router->get('/api/notifications/unread', [\App\Controllers\Api\GeneralApiController::class, 'unreadCount'], ['api']);
 $router->get('/api/barcode/lookup', [\App\Controllers\Api\GeneralApiController::class, 'barcodeLookup'], ['api']);
+
+// ============================================================
+// SCIM 2.0 PROTOCOL ENDPOINTS
+// ============================================================
+$router->get('/api/scim/v2/Users', [\App\Controllers\Api\ScimController::class, 'listUsers']);
+$router->get('/api/scim/v2/Users/{id}', [\App\Controllers\Api\ScimController::class, 'getUser']);
+$router->post('/api/scim/v2/Users', [\App\Controllers\Api\ScimController::class, 'createUser']);
+$router->delete('/api/scim/v2/Users/{id}', [\App\Controllers\Api\ScimController::class, 'deleteUser']);
+$router->get('/api/scim/v2/Groups', [\App\Controllers\Api\ScimController::class, 'listGroups']);

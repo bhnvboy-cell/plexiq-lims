@@ -301,51 +301,51 @@ CREATE TABLE IF NOT EXISTS instrument_results (
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_role ON users(role_id);
-CREATE INDEX idx_users_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
 
-CREATE INDEX idx_samples_code ON samples(sample_code);
-CREATE INDEX idx_samples_customer ON samples(customer_id);
-CREATE INDEX idx_samples_product ON samples(product_id);
-CREATE INDEX idx_samples_status ON samples(status);
-CREATE INDEX idx_samples_priority ON samples(priority);
-CREATE INDEX idx_samples_analyst ON samples(assigned_analyst_id);
-CREATE INDEX idx_samples_batch ON samples(batch_number);
-CREATE INDEX idx_samples_received_date ON samples(received_date);
-CREATE INDEX idx_samples_sap_sync ON samples(sap_sync_status);
-CREATE INDEX idx_samples_registered_by ON samples(registered_by);
+CREATE INDEX IF NOT EXISTS idx_samples_code ON samples(sample_code);
+CREATE INDEX IF NOT EXISTS idx_samples_customer ON samples(customer_id);
+CREATE INDEX IF NOT EXISTS idx_samples_product ON samples(product_id);
+CREATE INDEX IF NOT EXISTS idx_samples_status ON samples(status);
+CREATE INDEX IF NOT EXISTS idx_samples_priority ON samples(priority);
+CREATE INDEX IF NOT EXISTS idx_samples_analyst ON samples(assigned_analyst_id);
+CREATE INDEX IF NOT EXISTS idx_samples_batch ON samples(batch_number);
+CREATE INDEX IF NOT EXISTS idx_samples_received_date ON samples(received_date);
+CREATE INDEX IF NOT EXISTS idx_samples_sap_sync ON samples(sap_sync_status);
+CREATE INDEX IF NOT EXISTS idx_samples_registered_by ON samples(registered_by);
 
-CREATE INDEX idx_sample_tests_sample ON sample_tests(sample_id);
-CREATE INDEX idx_sample_tests_test ON sample_tests(test_id);
-CREATE INDEX idx_sample_tests_status ON sample_tests(status);
-CREATE INDEX idx_sample_tests_assigned ON sample_tests(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_sample_tests_sample ON sample_tests(sample_id);
+CREATE INDEX IF NOT EXISTS idx_sample_tests_test ON sample_tests(test_id);
+CREATE INDEX IF NOT EXISTS idx_sample_tests_status ON sample_tests(status);
+CREATE INDEX IF NOT EXISTS idx_sample_tests_assigned ON sample_tests(assigned_to);
 
-CREATE INDEX idx_results_sample_test ON results(sample_test_id);
-CREATE INDEX idx_results_entered_by ON results(entered_by);
+CREATE INDEX IF NOT EXISTS idx_results_sample_test ON results(sample_test_id);
+CREATE INDEX IF NOT EXISTS idx_results_entered_by ON results(entered_by);
 
-CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
 
-CREATE INDEX idx_sap_sync_logs_type ON sap_sync_logs(sync_type, entity_type);
-CREATE INDEX idx_sap_sync_logs_status ON sap_sync_logs(status);
-CREATE INDEX idx_sap_sync_logs_created ON sap_sync_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_sap_sync_logs_type ON sap_sync_logs(sync_type, entity_type);
+CREATE INDEX IF NOT EXISTS idx_sap_sync_logs_status ON sap_sync_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sap_sync_logs_created ON sap_sync_logs(created_at);
 
-CREATE INDEX idx_coa_documents_sample ON coa_documents(sample_id);
-CREATE INDEX idx_coa_documents_status ON coa_documents(status);
+CREATE INDEX IF NOT EXISTS idx_coa_documents_sample ON coa_documents(sample_id);
+CREATE INDEX IF NOT EXISTS idx_coa_documents_status ON coa_documents(status);
 
-CREATE INDEX idx_login_history_user ON login_history(user_id);
-CREATE INDEX idx_login_history_login ON login_history(login_at);
+CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_history_login ON login_history(login_at);
 
-CREATE INDEX idx_instruments_code ON instruments(instrument_code);
-CREATE INDEX idx_instruments_active ON instruments(is_active);
+CREATE INDEX IF NOT EXISTS idx_instruments_code ON instruments(instrument_code);
+CREATE INDEX IF NOT EXISTS idx_instruments_active ON instruments(is_active);
 
-CREATE INDEX idx_inst_results_instrument ON instrument_results(instrument_id);
-CREATE INDEX idx_inst_results_sample_test ON instrument_results(sample_test_id);
-CREATE INDEX idx_inst_results_sample_code ON instrument_results(sample_code);
-CREATE INDEX idx_inst_results_status ON instrument_results(status);
+CREATE INDEX IF NOT EXISTS idx_inst_results_instrument ON instrument_results(instrument_id);
+CREATE INDEX IF NOT EXISTS idx_inst_results_sample_test ON instrument_results(sample_test_id);
+CREATE INDEX IF NOT EXISTS idx_inst_results_sample_code ON instrument_results(sample_code);
+CREATE INDEX IF NOT EXISTS idx_inst_results_status ON instrument_results(status);
 
 -- ============================================================
 -- SEQUENCE FOR AUTO-GENERATING SAMPLE CODES

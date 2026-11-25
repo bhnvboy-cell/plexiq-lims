@@ -258,11 +258,18 @@ class AnalysisParameterController extends BaseController
             redirect('/instruments/' . $instrumentId . '/import');
         }
 
+        $uploadErrors = \App\Helpers\UploadValidator::validate($_FILES['instrument_file'], ['csv', 'xml', 'txt', 'json']);
+        if (!empty($uploadErrors)) {
+            session_flash('error', implode(' ', $uploadErrors));
+            redirect('/instruments/' . $instrumentId . '/import');
+            return;
+        }
+
         $dir = storage_path('instrument-imports');
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);
         }
-        $safeName = date('Ymd_His_') . basename($_FILES['instrument_file']['name']);
+        $safeName = date('Ymd_His_') . \App\Helpers\UploadValidator::sanitizeFileName($_FILES['instrument_file']['name']);
         $dest = $dir . DIRECTORY_SEPARATOR . $safeName;
 
         if (!move_uploaded_file($_FILES['instrument_file']['tmp_name'], $dest)) {

@@ -181,6 +181,7 @@ $router->post('/master/manufacturers/{id}/delete', [MasterDataController::class,
 $router->get('/users', [UserController::class, 'index'], ['auth']);
 $router->get('/users/create', [UserController::class, 'create'], ['auth']);
 $router->post('/users', [UserController::class, 'store'], ['auth']);
+$router->get('/users/access-review', [UserController::class, 'accessReview'], ['auth']);
 $router->get('/users/{id}/edit', [UserController::class, 'edit'], ['auth']);
 $router->post('/users/{id}', [UserController::class, 'update'], ['auth']);
 
@@ -380,6 +381,7 @@ $router->post('/notifications/test', [\App\Controllers\NotificationController::c
 // ============================================================
 $router->get('/api-management/tokens', [\App\Controllers\ApiIntegrationController::class, 'tokens'], ['auth']);
 $router->post('/api-management/tokens', [\App\Controllers\ApiIntegrationController::class, 'createToken'], ['auth']);
+$router->post('/api-management/tokens/{id}/rotate', [\App\Controllers\ApiIntegrationController::class, 'rotateToken'], ['auth']);
 $router->post('/api-management/tokens/{id}/revoke', [\App\Controllers\ApiIntegrationController::class, 'revokeToken'], ['auth']);
 $router->get('/api-management/webhooks', [\App\Controllers\ApiIntegrationController::class, 'webhooks'], ['auth']);
 $router->post('/api-management/webhooks', [\App\Controllers\ApiIntegrationController::class, 'createWebhook'], ['auth']);
