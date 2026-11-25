@@ -51,6 +51,10 @@ $router->get('/api/labels/sample/{id}', [\App\Controllers\LabelTemplateControlle
 $router->post('/api/uncertainty/calculate', [\App\Controllers\UncertaintyController::class, 'calculate'], ['api']);
 $router->post('/api/stability/regression/evaluate', [\App\Controllers\StabilityRegressionController::class, 'evaluate'], ['api']);
 
+// Phase 4: Instruments & Raw Data Vault API
+$router->post('/api/instruments/vault/ingest', [\App\Controllers\InstrumentVaultController::class, 'ingestApi']);
+$router->post('/api/instruments/worklists', [\App\Controllers\InstrumentWorklistController::class, 'store'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================

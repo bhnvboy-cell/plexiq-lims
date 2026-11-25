@@ -653,3 +653,16 @@ $router->post('/instruments/qualifications', [\App\Controllers\InstrumentQualifi
 // 7. ICH Q1E Stability Regression & Shelf-Life Forecasting
 $router->get('/stability/regression', [\App\Controllers\StabilityRegressionController::class, 'index'], ['auth']);
 $router->post('/stability/regression/evaluate', [\App\Controllers\StabilityRegressionController::class, 'evaluate'], ['auth']);
+
+// ============================================================
+// PHASE 4: INSTRUMENTS, AUTOMATION & RAW DATA VAULT
+// ============================================================
+// 1. Bidirectional Autosampler Worklists
+$router->get('/instruments/worklists', [\App\Controllers\InstrumentWorklistController::class, 'index'], ['auth']);
+$router->post('/instruments/worklists', [\App\Controllers\InstrumentWorklistController::class, 'store'], ['auth']);
+$router->get('/instruments/worklists/{id}/export', [\App\Controllers\InstrumentWorklistController::class, 'export'], ['auth']);
+
+// 2. Immutable Raw Data Vault & Tamper-Verification
+$router->get('/instruments/vault', [\App\Controllers\InstrumentVaultController::class, 'index'], ['auth']);
+$router->get('/instruments/vault/{id}', [\App\Controllers\InstrumentVaultController::class, 'show'], ['auth']);
+$router->post('/instruments/vault/verify/{id}', [\App\Controllers\InstrumentVaultController::class, 'verify'], ['auth']);

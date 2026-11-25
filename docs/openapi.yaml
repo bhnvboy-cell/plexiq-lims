@@ -330,6 +330,56 @@ paths:
       responses:
         '200':
           description: Regression parameters, 95% confidence intervals, and predicted shelf-life
+  /api/instruments/vault/ingest:
+    post:
+      summary: Ingest raw instrument stream into Immutable Raw Data Vault with HMAC signature
+      parameters:
+        - name: X-Filename
+          in: header
+          schema:
+            type: string
+        - name: X-HMAC-Signature
+          in: header
+          schema:
+            type: string
+        - name: X-Instrument-Id
+          in: header
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: Ingested and parsed
+  /api/instruments/worklists:
+    post:
+      summary: Generate autosampler sequence worklist
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                instrument_id:
+                  type: integer
+                name:
+                  type: string
+                worklist_format:
+                  type: string
+                entries:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Created sequence
   /api/results:
     get:
       summary: List test results
