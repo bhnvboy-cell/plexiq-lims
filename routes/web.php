@@ -683,3 +683,26 @@ $router->get('/clinical/fhir/observation/{id}', [\App\Controllers\ClinicalContro
 $router->get('/clinical/fhir/report/{id}', [\App\Controllers\ClinicalController::class, 'fhirDiagnosticReport'], ['auth']);
 $router->get('/clinical/hl7/{id}', [\App\Controllers\ClinicalController::class, 'hl7Export'], ['auth']);
 
+// ============================================================
+// PHASE 6: COMPETITIVE DIFFERENTIATORS & MODERN UX
+// ============================================================
+// 1. Dynamic No-Code Forms & Environment Promotion
+$router->get('/forms/schemas', [\App\Controllers\DynamicFormController::class, 'index'], ['auth']);
+$router->post('/forms/schemas', [\App\Controllers\DynamicFormController::class, 'store'], ['auth']);
+$router->post('/forms/promote', [\App\Controllers\DynamicFormController::class, 'promote'], ['auth']);
+$router->post('/forms/promote/{id}/apply', [\App\Controllers\DynamicFormController::class, 'applyPromotion'], ['auth']);
+
+// 2. AI-Assisted Root Cause & CAPA Quality Advisor
+$router->get('/quality/ai-advisor', [\App\Controllers\QualityAiController::class, 'index'], ['auth']);
+$router->post('/quality/ai-advisor/analyze', [\App\Controllers\QualityAiController::class, 'analyze'], ['auth']);
+$router->post('/quality/ai-advisor/review/{id}', [\App\Controllers\QualityAiController::class, 'review'], ['auth']);
+
+// 3. Validation-as-Code Requirement Traceability Matrix (RTM)
+$router->get('/validation/matrix', [\App\Controllers\ValidationMatrixController::class, 'index'], ['auth']);
+$router->get('/validation/matrix/export', [\App\Controllers\ValidationMatrixController::class, 'exportJson'], ['auth']);
+
+// 4. Bench Mode Tablet & Keyboard-First Result Entry
+$router->get('/bench', [\App\Controllers\BenchController::class, 'index'], ['auth']);
+$router->post('/bench/save-result', [\App\Controllers\BenchController::class, 'saveResult'], ['auth']);
+
+

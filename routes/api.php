@@ -61,6 +61,11 @@ $router->get('/api/analytics/bi-feed', [\App\Controllers\AnalyticsStreamControll
 $router->get('/api/fhir/Observation/{id}', [\App\Controllers\ClinicalController::class, 'fhirObservation'], ['api']);
 $router->get('/api/fhir/DiagnosticReport/{id}', [\App\Controllers\ClinicalController::class, 'fhirDiagnosticReport'], ['api']);
 
+// Phase 6: Differentiators & Bench API
+$router->post('/api/bench/result', [\App\Controllers\BenchController::class, 'saveResult'], ['api']);
+$router->get('/api/validation/rtm', [\App\Controllers\ValidationMatrixController::class, 'exportJson'], ['api']);
+$router->post('/api/quality/ai-advisor/analyze', [\App\Controllers\QualityAiController::class, 'analyze'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================

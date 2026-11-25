@@ -59,6 +59,9 @@
             <a href="/tests/pending" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/tests/pending') ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data"></i><span>Results Entry</span>
             </a>
+            <a href="/bench" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/bench') ? 'active' : '' ?>">
+                <i class="bi bi-tablet"></i><span>Bench Mode</span>
+            </a>
             <?php if (in_array($auth['role'], ['Reviewer', 'Approver', 'Admin'])): ?>
             <a href="/tests/review" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/tests/review') ? 'active' : '' ?>">
                 <i class="bi bi-check-circle"></i><span>Review</span>
@@ -90,6 +93,9 @@
             </a>
             <a href="/capa" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/capa') ? 'active' : '' ?>">
                 <i class="bi bi-shield-check"></i><span>CAPA</span>
+            </a>
+            <a href="/quality/ai-advisor" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/quality/ai-advisor') ? 'active' : '' ?>">
+                <i class="bi bi-robot"></i><span>AI Quality Advisor</span>
             </a>
 
             <div class="nav-section-label">Documents</div>
@@ -147,6 +153,12 @@
                 </a>
                 <a href="/installer/builder" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/installer') ? 'active' : '' ?>">
                     <i class="bi bi-box-seam"></i><span>Installer Builder</span>
+                </a>
+                <a href="/forms/schemas" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/forms/schemas') ? 'active' : '' ?>">
+                    <i class="bi bi-ui-checks"></i><span>Dynamic Forms</span>
+                </a>
+                <a href="/validation/matrix" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/validation/matrix') ? 'active' : '' ?>">
+                    <i class="bi bi-shield-check"></i><span>RTM Validation</span>
                 </a>
                 <div class="nav-section-label mt-2" style="font-size:0.6rem;">Integrations</div>
                 <a href="/erp" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/erp') ? 'active' : '' ?>">
