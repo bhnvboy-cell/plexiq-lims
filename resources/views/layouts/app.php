@@ -142,6 +142,9 @@
                 <a href="/master" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/master') ? 'active' : '' ?>">
                     <i class="bi bi-sliders"></i><span>Master Data</span>
                 </a>
+                <a href="/sites" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/sites') ? 'active' : '' ?>">
+                    <i class="bi bi-geo-alt"></i><span>Testing Facilities</span>
+                </a>
                 <a href="/users" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/users') ? 'active' : '' ?>">
                     <i class="bi bi-people"></i><span>Users</span>
                 </a>
@@ -194,6 +197,15 @@
                 </a>
                 <a href="/backups" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/backups') ? 'active' : '' ?>">
                     <i class="bi bi-database-gear"></i><span>Backup & Restore</span>
+                </a>
+                <a href="/ops/queue" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/ops/queue') ? 'active' : '' ?>">
+                    <i class="bi bi-cpu"></i><span>Job Queue & DLQ</span>
+                </a>
+                <a href="/ops/sbom" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/ops/sbom') ? 'active' : '' ?>">
+                    <i class="bi bi-shield-lock"></i><span>Supply Chain SBOM</span>
+                </a>
+                <a href="/ops/partitioning" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/ops/partitioning') ? 'active' : '' ?>">
+                    <i class="bi bi-database"></i><span>Partitioning Plan</span>
                 </a>
             </div>
             <?php endif; ?>

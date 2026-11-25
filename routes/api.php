@@ -66,6 +66,9 @@ $router->post('/api/bench/result', [\App\Controllers\BenchController::class, 'sa
 $router->get('/api/validation/rtm', [\App\Controllers\ValidationMatrixController::class, 'exportJson'], ['api']);
 $router->post('/api/quality/ai-advisor/analyze', [\App\Controllers\QualityAiController::class, 'analyze'], ['api']);
 
+// Phase 7: Scale & Security API
+$router->get('/api/ops/sbom', [\App\Controllers\OpsController::class, 'sbomJson'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================

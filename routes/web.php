@@ -705,4 +705,19 @@ $router->get('/validation/matrix/export', [\App\Controllers\ValidationMatrixCont
 $router->get('/bench', [\App\Controllers\BenchController::class, 'index'], ['auth']);
 $router->post('/bench/save-result', [\App\Controllers\BenchController::class, 'saveResult'], ['auth']);
 
+// ============================================================
+// PHASE 7: SCALE, MULTI-SITE & PRODUCTION OPERATIONS
+// ============================================================
+// 1. Multi-Site Facilities
+$router->get('/sites', [\App\Controllers\SiteController::class, 'index'], ['auth']);
+$router->post('/sites/switch/{id}', [\App\Controllers\SiteController::class, 'switchSite'], ['auth']);
+
+// 2. Production Operations: Queue & Workers
+$router->get('/ops/queue', [\App\Controllers\OpsController::class, 'queue'], ['auth']);
+
+// 3. Supply Chain Security & SBOM
+$router->get('/ops/sbom', [\App\Controllers\OpsController::class, 'sbom'], ['auth']);
+$router->get('/ops/partitioning', [\App\Controllers\OpsController::class, 'partitioning'], ['auth']);
+
+
 
