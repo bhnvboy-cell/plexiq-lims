@@ -149,6 +149,12 @@
                     <i class="bi bi-box-seam"></i><span>Installer Builder</span>
                 </a>
                 <div class="nav-section-label mt-2" style="font-size:0.6rem;">Integrations</div>
+                <a href="/erp" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/erp') ? 'active' : '' ?>">
+                    <i class="bi bi-diagram-2"></i><span>ERP Connectors</span>
+                </a>
+                <a href="/clinical" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/clinical') ? 'active' : '' ?>">
+                    <i class="bi bi-hospital"></i><span>Clinical & FHIR</span>
+                </a>
                 <a href="/api-management/tokens" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api-management') ? 'active' : '' ?>">
                     <i class="bi bi-key"></i><span>API Tokens</span>
                 </a>

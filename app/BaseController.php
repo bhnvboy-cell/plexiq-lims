@@ -22,8 +22,8 @@ abstract class BaseController
 
     protected function json($data, int $statusCode = 200): string
     {
-        http_response_code($statusCode);
         if (!headers_sent()) {
+            http_response_code($statusCode);
             header('Content-Type: application/json');
         }
         return json_encode($data);

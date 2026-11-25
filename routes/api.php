@@ -55,6 +55,12 @@ $router->post('/api/stability/regression/evaluate', [\App\Controllers\StabilityR
 $router->post('/api/instruments/vault/ingest', [\App\Controllers\InstrumentVaultController::class, 'ingestApi']);
 $router->post('/api/instruments/worklists', [\App\Controllers\InstrumentWorklistController::class, 'store'], ['api']);
 
+// Phase 5: Enterprise Integration, Identity & Streaming Analytics API
+$router->get('/api/analytics/stream', [\App\Controllers\AnalyticsStreamController::class, 'stream'], ['api']);
+$router->get('/api/analytics/bi-feed', [\App\Controllers\AnalyticsStreamController::class, 'biFeed'], ['api']);
+$router->get('/api/fhir/Observation/{id}', [\App\Controllers\ClinicalController::class, 'fhirObservation'], ['api']);
+$router->get('/api/fhir/DiagnosticReport/{id}', [\App\Controllers\ClinicalController::class, 'fhirDiagnosticReport'], ['api']);
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================

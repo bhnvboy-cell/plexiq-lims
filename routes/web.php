@@ -666,3 +666,20 @@ $router->get('/instruments/worklists/{id}/export', [\App\Controllers\InstrumentW
 $router->get('/instruments/vault', [\App\Controllers\InstrumentVaultController::class, 'index'], ['auth']);
 $router->get('/instruments/vault/{id}', [\App\Controllers\InstrumentVaultController::class, 'show'], ['auth']);
 $router->post('/instruments/vault/verify/{id}', [\App\Controllers\InstrumentVaultController::class, 'verify'], ['auth']);
+
+// ============================================================
+// PHASE 5: ENTERPRISE INTEGRATION & IDENTITY
+// ============================================================
+// 1. ERP Connectors (SAP S/4HANA, Oracle Cloud, Dynamics 365)
+$router->get('/erp', [\App\Controllers\ErpConnectorController::class, 'index'], ['auth']);
+$router->post('/erp/connectors/{id}/ping', [\App\Controllers\ErpConnectorController::class, 'testConnection'], ['auth']);
+$router->post('/erp/connectors/{id}/pull', [\App\Controllers\ErpConnectorController::class, 'pullLots'], ['auth']);
+$router->post('/erp/connectors/{id}/push', [\App\Controllers\ErpConnectorController::class, 'pushResults'], ['auth']);
+$router->post('/erp/connectors/{id}/sync-master', [\App\Controllers\ErpConnectorController::class, 'syncMaster'], ['auth']);
+
+// 2. Clinical Pack (FHIR R4 & HL7 v2.5.1)
+$router->get('/clinical', [\App\Controllers\ClinicalController::class, 'index'], ['auth']);
+$router->get('/clinical/fhir/observation/{id}', [\App\Controllers\ClinicalController::class, 'fhirObservation'], ['auth']);
+$router->get('/clinical/fhir/report/{id}', [\App\Controllers\ClinicalController::class, 'fhirDiagnosticReport'], ['auth']);
+$router->get('/clinical/hl7/{id}', [\App\Controllers\ClinicalController::class, 'hl7Export'], ['auth']);
+
