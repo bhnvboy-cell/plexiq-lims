@@ -702,19 +702,19 @@ CREATE INDEX IF NOT EXISTS idx_spc_readings_param_date ON spc_readings(parameter
 CREATE INDEX IF NOT EXISTS idx_spc_readings_batch ON spc_readings(batch_id);
 
 -- ============================================================
--- SEED DATA: SPC PARAMETERS (Starch & Glucose Industry)
+-- SEED DATA: SPC PARAMETERS (Pharmaceutical Quality Attributes)
 -- ============================================================
 INSERT INTO spc_parameters (parameter_code, parameter_name, category, unit, spec_min, spec_max, spec_target, ucl, lcl, subgroup_size) VALUES
-    ('PH-001', 'pH Level', 'Chemical', 'pH', 4.5, 5.5, 5.0, 5.7, 4.3, 1),
-    ('DS-001', 'Dry Substance', 'Concentration', '% w/w', 68.0, 72.0, 70.0, 73.0, 67.0, 1),
-    ('DP1-001', 'DP1 (Glucose)', 'Carbohydrate Profile', '%', 90.0, 97.0, 93.5, 98.0, 89.0, 1),
-    ('DP2-001', 'DP2 (Maltose)', 'Carbohydrate Profile', '%', 2.0, 6.0, 4.0, 7.0, 1.0, 1),
-    ('DP3-001', 'DP3 (Maltotriose)', 'Carbohydrate Profile', '%', 0.5, 3.0, 1.5, 4.0, 0.0, 1),
-    ('DP4-001', 'DP4+ (Higher Saccharides)', 'Carbohydrate Profile', '%', 0.5, 4.0, 2.0, 5.0, 0.0, 1),
-    ('DE-001', 'Dextrose Equivalent', 'Calculated', 'DE', 95.0, 99.5, 97.5, 99.8, 94.0, 1),
-    ('VISC-001', 'Viscosity', 'Physical', 'mPa·s', 10.0, 30.0, 20.0, 35.0, 5.0, 1),
-    ('COL-001', 'Color (ICUMSA)', 'Physical', 'IU', 0.0, 50.0, 25.0, 60.0, 0.0, 1),
-    ('TURB-001', 'Turbidity', 'Physical', 'NTU', 0.0, 10.0, 5.0, 12.0, 0.0, 1)
+    ('PH-001', 'pH Determination', 'Chemical', 'pH', 4.5, 5.5, 5.0, 5.7, 4.3, 1),
+    ('ASSAY-001', 'Assay Level by HPLC', 'Potency', '% w/w', 98.0, 102.0, 100.0, 101.5, 98.5, 1),
+    ('DISS-001', 'Dissolution (30 min)', 'Dissolution', '%', 80.0, 100.0, 92.0, 98.0, 85.0, 1),
+    ('IMP-001', 'Total Related Substances', 'Purity', '%', 0.0, 0.5, 0.15, 0.40, 0.0, 1),
+    ('KF-001', 'Water Content (Karl Fischer)', 'Physical', '%', 0.0, 5.0, 2.5, 4.5, 0.5, 1),
+    ('CU-001', 'Content Uniformity (AV)', 'Quality', 'AV', 0.0, 15.0, 5.0, 12.0, 0.0, 1),
+    ('LOD-001', 'Loss on Drying', 'Physical', '%', 0.0, 1.0, 0.4, 0.8, 0.0, 1),
+    ('VISC-001', 'Viscosity (Solution)', 'Physical', 'mPa·s', 10.0, 30.0, 20.0, 35.0, 5.0, 1),
+    ('COL-001', 'Color Intensity', 'Physical', 'IU', 0.0, 50.0, 25.0, 60.0, 0.0, 1),
+    ('TURB-001', 'Clarity and Opalescence', 'Physical', 'NTU', 0.0, 10.0, 5.0, 12.0, 0.0, 1)
 ON CONFLICT (parameter_code) DO NOTHING;
 
 -- ============================================================

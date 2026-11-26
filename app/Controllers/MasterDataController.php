@@ -752,7 +752,7 @@ class MasterDataController extends BaseController
             '[[COA_NUMBER]]' => 'COA-DEMO-2026-00001',
             '[[SAMPLE_CODE]]' => 'SMP-DEMO-001',
             '[[CUSTOMER_NAME]]' => 'Demo Customer Inc.',
-            '[[PRODUCT_NAME]]' => 'Glucose Syrup',
+            '[[PRODUCT_NAME]]' => 'Paracetamol 500mg Tablets BP',
             '[[BATCH_NUMBER]]' => 'BATCH-2026-001',
             '[[MANUFACTURE_DATE]]' => '2026-06-01',
             '[[EXPIRY_DATE]]' => '2027-06-01',
@@ -761,8 +761,8 @@ class MasterDataController extends BaseController
         ];
         $html = str_replace(array_keys($placeholders), array_values($placeholders), $html);
         $demoRows = '';
-        foreach (['pH', 'Dry Substance', 'DP1 (Glucose)', 'Viscosity', 'Color'] as $t) {
-            $demoRows .= "<tr><td>{$t}</td><td>HPLC</td><td>95.0-99.5%</td><td>97.2</td><td>%</td><td>Pass</td></tr>";
+        foreach (['Assay of Active (HPLC)', 'Dissolution Rate (30 min)', 'Related Substances', 'Water Content (KF)', 'Uniformity of Dosage'] as $t) {
+            $demoRows .= "<tr><td>{$t}</td><td>HPLC / USP</td><td>98.0-102.0%</td><td>99.8</td><td>%</td><td>Pass</td></tr>";
         }
         $html = str_replace('[[RESULTS_ROWS]]', $demoRows, $html);
         echo $html;

@@ -97,12 +97,12 @@
 --------------------------------------------------------------------------------
   The system includes pre-loaded seed data:
   - 4 Customers (Demo, PharmaCorp, BioGen, ChemSolutions)
-  - 10 Products (Test Product Alpha + 3 Starch + 3 Glucose + 3 Additional)
+  - 10 Products (Test Product Alpha + 6 Pharmaceutical APIs/Formulations + 3 Additional)
   - 8 Methods (HPLC, pH, GC, Titration, Gravimetric, FTIR, KF, Density)
   - 8 Units (%, ppm, pH, mm, cP, N, mg/kg, etc.)
-  - 20 Tests (general + 6 Starch-specific + 6 Glucose-specific)
+  - 20 Tests (general + 12 Pharmaceutical Release Testing parameters)
   - 36 Product-Test Mappings (6 products x 6 tests each)
-  - 60 SPC demo readings per parameter (pH, DS, DP1-DP4, DE, Viscosity, Color, Turbidity)
+  - 60 SPC demo readings per parameter (Assay, Dissolution, Impurities, KF, pH, etc.)
   - 1 COA Template (Standard)
   - 1 Project (Q4 Quality Improvement)
   - 1 OOS Record (pH Level)

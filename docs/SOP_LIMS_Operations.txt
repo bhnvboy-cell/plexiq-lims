@@ -7,13 +7,13 @@
 1. PURPOSE
 --------------------------------------------------------------------------------
   To define the standard procedure for registration, analysis, review, and
-  release of batches and samples using PlexiQ LIMS for Starch and Glucose
+  release of batches and samples using PlexiQ LIMS for Pharmaceutical
   product quality control.
 
 2. SCOPE
 --------------------------------------------------------------------------------
   This SOP applies to all Quality Control (QC) personnel including Analysts,
-  Reviewers, Approvers, and System Administrators handling Starch and Glucose
+  Reviewers, Approvers, and System Administrators handling Pharmaceutical
   product testing in the laboratory.
 
 3. RESPONSIBILITIES
@@ -42,7 +42,7 @@
   5.1.1. Login as Admin at http://localhost:8080
   5.1.2. Navigate to Administration > Master Data
   5.1.3. Configure the following as needed:
-         a) Products - Add/modify Starch and Glucose products with category
+         a) Products - Add/modify Pharmaceutical products with category
          b) Tests - Add analysis parameters with spec limits and methods
          c) Product-Test Mapping - Assign tests to products with product-
             specific specification limits
@@ -57,9 +57,9 @@
   5.2.2. Click "Batch Management" in the sidebar
   5.2.3. Click "New Batch" button
   5.2.4. Fill in the registration form:
-         a) Batch Number - e.g., STARCH-2026-001
-         b) Batch Size - e.g., 1000 kg
-         c) Product - Select from Starch/Glucose products
+         a) Batch Number - e.g., PHARMA-2026-001
+         b) Batch Size - e.g., 100,000 units
+         c) Product - Select from Pharmaceutical products
          d) Assigned Analyst - Select analyst (or leave auto-assigned)
          e) Manufacture Date - Date of production
          f) Expiry Date - Date of expiration
@@ -135,20 +135,20 @@
   5.8.2. Click "Map Test" to assign a test to a product
   5.8.3. Set product-specific specification limits (overrides global limits)
   5.8.4. Each product can have its own pass/fail criteria per test
-  5.8.5. Example - Starch parameters (6 tests):
-         a) pH (20% slurry)        Spec: 5.0 - 7.0
-         b) Moisture Content       Spec: NMT 14.0%
-         c) Viscosity (6% solids)  Spec: 200 - 800 cP
-         d) Brightness/Whiteness   Spec: 85.0% - 100.0%
-         e) Particle Size (d50)    Spec: 10 - 35 um
-         f) Sulphated Ash          Spec: NMT 0.5%
-  5.8.6. Example - Glucose parameters (6 tests):
-         a) Dextrose Equivalent    Spec: 40 - 44
-         b) pH (50% solution)      Spec: 4.0 - 6.0
-         c) Dry Substance          Spec: 70% - 82%
-         d) Colour (ICUMSA)        Spec: NMT 200 IU
-         e) Turbidity (NTU)        Spec: NMT 50 NTU
-         f) Conductivity           Spec: NMT 50 uS/cm
+  5.8.5. Example - Solid Oral Dosage Parameters (6 tests):
+         a) Assay (HPLC)           Spec: 98.0% - 102.0%
+         b) Dissolution (30 min)   Spec: NLT 80.0%
+         c) Related Substances     Spec: NMT 0.50%
+         d) Water Content (KF)     Spec: NMT 5.0%
+         e) Content Uniformity     Spec: AV NMT 15.0
+         f) Microbial Limit (TAMC) Spec: NMT 1000 CFU/g
+  5.8.6. Example - Sterile Injectable Parameters (6 tests):
+         a) Assay (Potency)        Spec: 98.0% - 102.0%
+         b) Bacterial Endotoxins   Spec: NMT 0.20 EU/mg
+         c) Sterility Testing      Spec: Sterile / No Growth
+         d) Particulate Matter     Spec: USP <788> Pass
+         e) pH Determination       Spec: 4.0 - 7.0
+         f) Reconstitution Time    Spec: NMT 60 seconds
 
   5.9. SPC (STATISTICAL PROCESS CONTROL)
   ----------------------------------------------------------------------------

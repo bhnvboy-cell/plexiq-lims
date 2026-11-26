@@ -19,7 +19,7 @@ $title = 'Create Product Specification';
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Specification Code <span class="text-danger">*</span></label>
-                            <input type="text" name="spec_code" class="form-control" required placeholder="e.g. SPEC-STARCH-001">
+                            <input type="text" name="spec_code" class="form-control" required placeholder="e.g. SPEC-PHARMA-001">
                             <small class="text-muted">Unique identifier for this specification document.</small>
                         </div>
                         <div class="col-md-6">

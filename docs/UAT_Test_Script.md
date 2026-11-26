@@ -77,7 +77,7 @@ Legend — **Pre**: preconditions, **Steps**: steps to perform, **Expected**: ex
 ### 3.2 Products, Tests, Methods, Units, Sample Types
 | TC ID | Test Case | Pre | Steps | Expected | Result | Notes |
 |-------|-----------|-----|-------|----------|--------|-------|
-| MSTR-05 | Create product | Admin | 1) `/master/products` 2) Add product (e.g. Starch) 3) Save | Product created and listed | | |
+| MSTR-05 | Create product | Admin | 1) `/master/products` 2) Add product (e.g. Paracetamol) 3) Save | Product created and listed | | |
 | MSTR-06 | Create test parameter | Admin | 1) `/master/tests` 2) Add test with spec limits/method 3) Save | Test created with limits shown | | |
 | MSTR-07 | Create method (tile format) | Admin | 1) `/master/methods` 2) Add method tile 3) Save; then edit via JSON editor | Method saved; JSON edit round-trips without data loss | | |
 | MSTR-08 | Create unit | Admin | 1) `/master/units` 2) Add unit (e.g. `%`, `ppm`) | Unit appears in unit list | | |
@@ -101,7 +101,7 @@ Legend — **Pre**: preconditions, **Steps**: steps to perform, **Expected**: ex
 
 | TC ID | Test Case | Pre | Steps | Expected | Result | Notes |
 |-------|-----------|-----|-------|----------|--------|-------|
-| BATCH-01 | Create batch | Admin/Analyst, product exists | 1) `/batches` 2) New Batch 3) Enter batch number e.g. `STARCH-2026-001`, product, dates 4) Save | Batch created with status `Registered` | | |
+| BATCH-01 | Create batch | Admin/Analyst, product exists | 1) `/batches` 2) New Batch 3) Enter batch number e.g. `PHARMA-2026-001`, product, dates 4) Save | Batch created with status `Registered` | | |
 | BATCH-02 | Duplicate batch number | Batch exists | 1) Try to create batch with same number | Duplicate rejected with error | | |
 | BATCH-03 | Edit batch | Batch exists | 1) Edit batch details 2) Save | Changes saved and audit-logged | | |
 | BATCH-04 | Add sample to batch | Batch exists | 1) Open batch 2) Add sample(s) | Samples associated with batch; count updated | | |

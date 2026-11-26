@@ -36,115 +36,100 @@ CREATE TABLE IF NOT EXISTS batches (
 ALTER TABLE samples ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES batches(id);
 
 -- ============================================================
--- SEED: Starch Product with 6 analysis parameters
+-- SEED: Pharmaceutical Products (APIs & Finished Products)
 -- ============================================================
 INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'STARCH-001', 'Maize Starch Food Grade', 'Food grade maize starch for confectionery and bakery applications', 'Starch', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'STARCH-001');
+SELECT 'PHARMA-001', 'Amoxicillin Trihydrate IP/USP', 'Semi-synthetic antibiotic active pharmaceutical ingredient for oral suspension and capsules', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-001');
 
 INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'STARCH-002', 'Tapioca Starch Industrial', 'Industrial grade tapioca starch for adhesives and textiles', 'Starch', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'STARCH-002');
+SELECT 'PHARMA-002', 'Paracetamol 500mg Tablets BP/USP', 'Analgesic and antipyretic compressed finished drug product tablets 500mg', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-002');
 
 INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'STARCH-003', 'Modified Starch E1420', 'Acetylated starch for food thickening applications', 'Starch', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'STARCH-003');
+SELECT 'PHARMA-003', 'Ibuprofen 400mg Film-Coated Tablets', 'Non-steroidal anti-inflammatory drug (NSAID) finished product 400mg caplets', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-003');
+
+INSERT INTO products (product_code, product_name, description, category, is_active)
+SELECT 'PHARMA-004', 'Ceftriaxone Sodium for Injection 1g', 'Third-generation cephalosporin sterile powder for reconstitution and parenteral administration', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-004');
+
+INSERT INTO products (product_code, product_name, description, category, is_active)
+SELECT 'PHARMA-005', 'Metformin HCl 500mg Extended Release Tablets', 'Biguanide oral antidiabetic extended-release finished product tablets 500mg', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-005');
+
+INSERT INTO products (product_code, product_name, description, category, is_active)
+SELECT 'PHARMA-006', 'Atorvastatin Calcium Trihydrate USP', 'HMG-CoA reductase inhibitor active pharmaceutical ingredient for cholesterol management', 'Pharmaceuticals', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'PHARMA-006');
 
 -- ============================================================
--- SEED: Glucose Product with 6 analysis parameters
--- ============================================================
-INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'GLUCOSE-001', 'Glucose Syrup 42DE', 'Glucose syrup 42 DE for confectionery and brewing', 'Glucose', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'GLUCOSE-001');
-
-INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'GLUCOSE-002', 'Dextrose Monohydrate', 'Dextrose monohydrate crystalline powder for food/pharma', 'Glucose', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'GLUCOSE-002');
-
-INSERT INTO products (product_code, product_name, description, category, is_active)
-SELECT 'GLUCOSE-003', 'Glucose Syrup 62DE', 'High conversion glucose syrup 62 DE for confectionery', 'Glucose', TRUE
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE product_code = 'GLUCOSE-003');
-
--- ============================================================
--- SEED: Starch Analysis Tests (6 parameters)
+-- SEED: Pharmaceutical Quality Control Tests (12 release parameters)
 -- ============================================================
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text) 
-SELECT 'ST-TEST-001', 'pH (20% slurry)', m.id, u.id, 5.0, 7.0, '5.0 - 7.0'
-FROM methods m, units u WHERE m.method_code = 'PH-001' AND u.unit_code = 'pH'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-001');
+SELECT 'PH-TEST-001', 'Assay of Active Ingredient (HPLC)', m.id, u.id, 98.0, 102.0, '98.0% - 102.0%'
+FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = '%'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-001');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'ST-TEST-002', 'Moisture Content', m.id, u.id, 0, 14.0, 'NMT 14.0%'
-FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = '%'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-002');
-
-INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'ST-TEST-003', 'Viscosity (6% solids, 95°C)', m.id, u.id, 200, 800, '200 - 800 cP'
-FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = 'cP'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-003');
-
-INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'ST-TEST-004', 'Brightness / Whiteness', m.id, u.id, 85, 100, '85.0% - 100.0%'
-FROM methods m, units u WHERE m.method_code = 'FTIR-001' AND u.unit_code = '%'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-004');
-
-INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'ST-TEST-005', 'Particle Size (d50)', m.id, u.id, 10, 35, '10 - 35 µm'
-FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = 'mm'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-005');
-
-INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'ST-TEST-006', 'Sulphated Ash', m.id, u.id, 0, 0.5, 'NMT 0.5%'
-FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = '%'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'ST-TEST-006');
-
--- ============================================================
--- SEED: Glucose Analysis Tests (6 parameters)
--- ============================================================
-INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-001', 'Dextrose Equivalent (DE)', m.id, u.id, 40, 44, '40 - 44'
+SELECT 'PH-TEST-002', 'Dissolution Rate (USP Apparatus II)', m.id, u.id, 80.0, 100.0, 'NLT 80.0% in 30 min'
 FROM methods m, units u WHERE m.method_code = 'TITR-001' AND u.unit_code = '%'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-001');
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-002');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-002', 'pH (50% solution)', m.id, u.id, 4.0, 6.0, '4.0 - 6.0'
-FROM methods m, units u WHERE m.method_code = 'PH-001' AND u.unit_code = 'pH'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-002');
+SELECT 'PH-TEST-003', 'Related Substances / Impurities (HPLC)', m.id, u.id, 0.0, 0.5, 'NMT 0.50%'
+FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = '%'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-003');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-003', 'Dry Substance (DS)', m.id, u.id, 70, 82, '70% - 82%'
+SELECT 'PH-TEST-004', 'Water Determination (Karl Fischer)', m.id, u.id, 0.0, 5.0, 'NMT 5.0%'
+FROM methods m, units u WHERE m.method_code = 'TITR-001' AND u.unit_code = '%'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-004');
+
+INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
+SELECT 'PH-TEST-005', 'Uniformity of Dosage Units (CU)', m.id, u.id, 0.0, 15.0, 'AV NMT 15.0'
+FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = '%'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-005');
+
+INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
+SELECT 'PH-TEST-006', 'Bacterial Endotoxins (LAL)', m.id, u.id, 0.0, 0.20, 'NMT 0.20 EU/mg'
+FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = 'ppm'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-006');
+
+INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
+SELECT 'PH-TEST-007', 'Sterility Testing (Membrane Filtration)', m.id, u.id, 0.0, 0.0, 'Sterile / No Growth'
 FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = '%'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-003');
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-007');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-004', 'Colour (ICUMSA)', m.id, u.id, 0, 200, 'NMT 200 IU'
-FROM methods m, units u WHERE m.method_code = 'FTIR-001' AND u.unit_code = 'cP'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-004');
+SELECT 'PH-TEST-008', 'pH Determination (Potentiometric)', m.id, u.id, 4.0, 7.0, '4.0 - 7.0'
+FROM methods m, units u WHERE m.method_code = 'PH-001' AND u.unit_code = 'pH'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-008');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-005', 'Turbidity (NTU)', m.id, u.id, 0, 50, 'NMT 50 NTU'
-FROM methods m, units u WHERE m.method_code = 'HPLC-001' AND u.unit_code = 'mm'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-005');
+SELECT 'PH-TEST-009', 'Loss on Drying (LOD)', m.id, u.id, 0.0, 1.0, 'NMT 1.0%'
+FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = '%'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-009');
 
 INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
-SELECT 'GL-TEST-006', 'Conductivity (µS/cm)', m.id, u.id, 0, 50, 'NMT 50 µS/cm'
+SELECT 'PH-TEST-010', 'Heavy Metals / Elemental Impurities (ICP-MS)', m.id, u.id, 0.0, 10.0, 'NMT 10 ppm'
+FROM methods m, units u WHERE m.method_code = 'FTIR-001' AND u.unit_code = 'ppm'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-010');
+
+INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
+SELECT 'PH-TEST-011', 'Microbial Enumeration (TAMC)', m.id, u.id, 0.0, 1000.0, 'NMT 1000 CFU/g'
+FROM methods m, units u WHERE m.method_code = 'GRAV-001' AND u.unit_code = 'ppm'
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-011');
+
+INSERT INTO tests (test_code, test_name, method_id, unit_id, min_spec_limit, max_spec_limit, spec_limit_text)
+SELECT 'PH-TEST-012', 'Residual Solvents (GC-Headspace)', m.id, u.id, 0.0, 3000.0, 'NMT 3000 ppm'
 FROM methods m, units u WHERE m.method_code = 'TITR-001' AND u.unit_code = 'ppm'
-AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'GL-TEST-006');
+AND NOT EXISTS (SELECT 1 FROM tests WHERE test_code = 'PH-TEST-012');
 
 -- ============================================================
--- Link Starch products to Starch tests
+-- Link Pharmaceutical products to Pharmaceutical tests
 -- ============================================================
 INSERT INTO products_tests (product_id, test_id, sort_order)
 SELECT p.id, t.id, row_number() OVER (ORDER BY t.test_code)
 FROM products p CROSS JOIN tests t
-WHERE p.category = 'Starch' AND t.test_code LIKE 'ST-TEST-%'
-AND NOT EXISTS (SELECT 1 FROM products_tests pt WHERE pt.product_id = p.id AND pt.test_id = t.id);
-
--- ============================================================
--- Link Glucose products to Glucose tests
--- ============================================================
-INSERT INTO products_tests (product_id, test_id, sort_order)
-SELECT p.id, t.id, row_number() OVER (ORDER BY t.test_code)
-FROM products p CROSS JOIN tests t
-WHERE p.category = 'Glucose' AND t.test_code LIKE 'GL-TEST-%'
+WHERE p.category = 'Pharmaceuticals' AND t.test_code LIKE 'PH-TEST-%'
 AND NOT EXISTS (SELECT 1 FROM products_tests pt WHERE pt.product_id = p.id AND pt.test_id = t.id);

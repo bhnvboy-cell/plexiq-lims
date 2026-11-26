@@ -72,7 +72,7 @@ $$\text{Product} \longrightarrow \text{Versioned Spec} \longrightarrow \text{Ana
 - **CycloneDX 1.5 SBOM & Vulnerability Scanner (`/ops/sbom`)**: Built-in Software Bill of Materials (SBOM) generator in CycloneDX 1.5 JSON standard with automated open-source license scanning.
 - **PostgreSQL Table Partitioning Strategy (`/ops/partitioning`)**: Partitioning monitor for Hot, Warm, and Cold tiering of high-volume `audit_logs` and `results` tables.
 
-### 7. Commercial LIMS Architecture & Quality Spine (Migrations 025–028)
+### 7. Commercial LIMS Architecture & Quality Spine (Migrations 025–029)
 - **Versioned Specifications & Limits (`/specifications`, `/product-test-plans`)**: 4-layer master data model (`products` &rarr; `specifications` & `specification_versions` &rarr; `analyses` &rarr; `components` &rarr; `specification_limits`). Database-level trigger `trg_spec_version_immutability` guarantees approved specification versions are completely immutable. Effective-date range resolution ensures samples logged today automatically lock to current active limits.
 - **Sample Entry Follows the Product (`/samples/create`, `/sample-templates`)**: At sample login, product and stage (raw material, in-process, finished, stability) automatically determine the analytical test plan and attach the effective specification version. Adding or removing tests requires explicit permissions, captures mandatory justification, and logs full audit entries.
 - **Frozen Limit Snapshots**: Each result row snapshots the active specification version ID, specification min/max, warn/reject bounds, and LOQ at test assignment time. Future specification revisions or parameter edits will never retroactively mutate historical released release results.
@@ -130,7 +130,7 @@ DB_PASSWORD=your_password
 psql -U postgres -d limsdb -f database/schema.sql
 psql -U postgres -d limsdb -f database/seed_data.sql
 
-# Apply all migrations (001 through 028)
+# Apply all migrations (001 through 029)
 for %f in (database\migrations\*.sql) do psql -U postgres -d limsdb -f "%f"
 ```
 
@@ -228,8 +228,8 @@ plexiq-lims/
 │   ├── edge-agent.php      # Edge IoT collector service
 │   └── worker.php          # Background job queue worker
 ├── database/
-│   ├── migrations/         # Schema migrations (001_initial.sql through 028_result_flow_and_lineage.sql)
-│   ├── migrations/rollbacks/ # Rollback SQL scripts for every migration (001 through 028)
+│   ├── migrations/         # Schema migrations (001_initial.sql through 029_replace_starch_glucose_with_pharma.sql)
+│   ├── migrations/rollbacks/ # Rollback SQL scripts for every migration (001 through 029)
 │   ├── schema.sql          # Baseline PostgreSQL schema
 │   └── seed_data.sql       # Initial master tables and roles
 ├── public/                 # Web server document root

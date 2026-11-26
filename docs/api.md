@@ -67,7 +67,7 @@ GET /api/samples
             "status": "Registered",
             "priority": "Normal",
             "customer_name": "Acme Corp",
-            "product_name": "Glucose Syrup",
+            "product_name": "Amoxicillin Trihydrate IP/USP",
             "batch_number": "BATCH-001",
             "created_at": "2026-06-27T10:00:00"
         }
@@ -104,7 +104,7 @@ GET /api/samples/{id}
     "assigned_reviewer_id": 3,
     "assigned_approver_id": 4,
     "customer_name": "Acme Corp",
-    "product_name": "Glucose Syrup",
+    "product_name": "Amoxicillin Trihydrate IP/USP",
     "analyst_name": "John Analyst",
     "reviewer_name": "Jane Reviewer",
     "approver_name": "Bob Approver",
@@ -343,7 +343,7 @@ GET /api/barcode/{code}
     "id": 1,
     "sample_code": "SMP-20260627-00001",
     "status": "Registered",
-    "product_name": "Glucose Syrup",
+    "product_name": "Amoxicillin Trihydrate IP/USP",
     "url": "/samples/1"
 }
 ```
