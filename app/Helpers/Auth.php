@@ -197,13 +197,14 @@ class Auth
 
     public static function logout(): void
     {
-        if (self::check()) {
+        $userId = $_SESSION['user_id'] ?? null;
+        if ($userId !== null) {
             try {
                 $db = \App\Helpers\Database::connect();
                 $stmt = $db->prepare('UPDATE login_history SET logout_at = CURRENT_TIMESTAMP WHERE session_id = ? AND logout_at IS NULL');
                 $stmt->execute([session_id()]);
 
-                \App\Helpers\Audit::log('Logout', 'users', self::id(), null, ['username' => $_SESSION['user_username'] ?? '']);
+                \App\Helpers\Audit::log('Logout', 'users', (int)$userId, null, ['username' => $_SESSION['user_username'] ?? '']);
             } catch (\Throwable $e) {
                 if (!defined('TESTING') || !TESTING) {
                     error_log('Logout DB error: ' . $e->getMessage());

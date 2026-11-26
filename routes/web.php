@@ -64,6 +64,7 @@ $router->get('/tests/pending', [TestResultController::class, 'pendingResults'], 
 $router->get('/tests/{id}/result', [TestResultController::class, 'enterResult'], ['auth']);
 $router->post('/tests/{id}/result', [TestResultController::class, 'saveResult'], ['auth']);
 $router->get('/tests/review', [TestResultController::class, 'reviewResults'], ['auth']);
+$router->get('/results/review-by-exception', [TestResultController::class, 'reviewResults'], ['auth']);
 $router->post('/tests/{id}/review', [TestResultController::class, 'approveResult'], ['auth']);
 $router->get('/tests/final-approval', [TestResultController::class, 'finalApproval'], ['auth']);
 $router->post('/tests/{id}/final-approve', [TestResultController::class, 'finalApproveResult'], ['auth']);
