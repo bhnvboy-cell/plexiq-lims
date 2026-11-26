@@ -132,4 +132,23 @@ class ProductionLotController extends BaseController
 
         redirect('/production-lots/' . $id);
     }
+
+    public function releaseReport(int $id): string
+    {
+        Auth::requireAnyRole(['Admin', 'Approver', 'Reviewer', 'Analyst']);
+
+        $lot = ProductionLot::findWithRelations($id);
+        if (!$lot) {
+            session_flash('error', 'Production lot not found.');
+            redirect('/production-lots');
+        }
+
+        $readiness = $this->lotService->evaluateLotReadiness($id);
+
+        return $this->render('production-lots.release-report', [
+            'lot' => $lot,
+            'readiness' => $readiness,
+            'samples' => $lot['samples'] ?? []
+        ]);
+    }
 }

@@ -337,6 +337,7 @@ $router->get('/production-lots', [\App\Controllers\ProductionLotController::clas
 $router->get('/production-lots/create', [\App\Controllers\ProductionLotController::class, 'create'], ['auth']);
 $router->post('/production-lots', [\App\Controllers\ProductionLotController::class, 'store'], ['auth']);
 $router->get('/production-lots/{id}', [\App\Controllers\ProductionLotController::class, 'show'], ['auth']);
+$router->get('/production-lots/{id}/release-report', [\App\Controllers\ProductionLotController::class, 'releaseReport'], ['auth']);
 $router->post('/production-lots/{id}/disposition', [\App\Controllers\ProductionLotController::class, 'setDisposition'], ['auth']);
 $router->post('/production-lots/{id}/sync-erp', [\App\Controllers\ProductionLotController::class, 'syncErp'], ['auth']);
 
@@ -705,6 +706,7 @@ $router->post('/instruments/vault/verify/{id}', [\App\Controllers\InstrumentVaul
 // ============================================================
 // 1. ERP Connectors (SAP S/4HANA, Oracle Cloud, Dynamics 365)
 $router->get('/erp', [\App\Controllers\ErpConnectorController::class, 'index'], ['auth']);
+$router->get('/erp/reconciliation', [\App\Controllers\ErpConnectorController::class, 'reconciliation'], ['auth']);
 $router->post('/erp/connectors/{id}/ping', [\App\Controllers\ErpConnectorController::class, 'testConnection'], ['auth']);
 $router->post('/erp/connectors/{id}/pull', [\App\Controllers\ErpConnectorController::class, 'pullLots'], ['auth']);
 $router->post('/erp/connectors/{id}/push', [\App\Controllers\ErpConnectorController::class, 'pushResults'], ['auth']);

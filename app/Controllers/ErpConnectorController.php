@@ -115,4 +115,25 @@ class ErpConnectorController extends BaseController
             return $this->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }
+
+    public function reconciliation(): string
+    {
+        Auth::requireAnyRole(['Admin', 'Approver', 'Reviewer']);
+        $db = Database::connect();
+
+        $lots = $db->query("
+            SELECT pl.*, p.product_code, p.product_name, u.full_name as disposition_by_name
+            FROM production_lots pl
+            JOIN products p ON pl.product_id = p.id
+            LEFT JOIN users u ON pl.disposition_by = u.id
+            ORDER BY pl.updated_at DESC
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $connectors = $db->query("SELECT * FROM erp_connectors WHERE is_active = TRUE ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
+
+        return $this->render('erp.reconciliation', [
+            'lots' => $lots,
+            'connectors' => $connectors
+        ]);
+    }
 }
