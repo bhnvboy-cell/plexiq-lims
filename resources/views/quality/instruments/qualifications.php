@@ -1,6 +1,6 @@
 <?php
 $title = 'Equipment Lifecycle: DQ/IQ/OQ/PQ & Out-of-Calibration Impact';
-require __DIR__ . '/../../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -150,5 +150,3 @@ require __DIR__ . '/../../layouts/header.php';
         </form>
     </div>
 </div>
-
-<?php require __DIR__ . '/../../layouts/footer.php'; ?>

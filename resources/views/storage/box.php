@@ -1,6 +1,6 @@
 <?php
 $title = 'Storage Box Grid - ' . htmlspecialchars($location['name']);
-require __DIR__ . '/../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -117,5 +117,3 @@ require __DIR__ . '/../layouts/header.php';
         </form>
     </div>
 </div>
-
-<?php require __DIR__ . '/../layouts/footer.php'; ?>

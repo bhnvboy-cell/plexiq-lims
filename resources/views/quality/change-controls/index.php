@@ -1,6 +1,6 @@
 <?php
 $title = 'Change Control Management (21 CFR Part 211 / EU Annex 11)';
-require __DIR__ . '/../../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -116,5 +116,3 @@ require __DIR__ . '/../../layouts/header.php';
         </form>
     </div>
 </div>
-
-<?php require __DIR__ . '/../../layouts/footer.php'; ?>

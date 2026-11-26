@@ -1,6 +1,6 @@
 <?php
 $title = 'Industrial Label Templates (ZPL / Brother / Barcode)';
-require __DIR__ . '/../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -54,5 +54,3 @@ require __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 </div>
-
-<?php require __DIR__ . '/../layouts/footer.php'; ?>

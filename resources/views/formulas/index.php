@@ -1,6 +1,6 @@
 <?php
 $title = 'Calculation Formulas & Sandbox Engine';
-require __DIR__ . '/../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -159,5 +159,3 @@ function runSandboxTest() {
     });
 }
 </script>
-
-<?php require __DIR__ . '/../layouts/footer.php'; ?>

@@ -1,6 +1,6 @@
 <?php
 $title = 'Vault Stream Inspection - ' . htmlspecialchars($vault['original_filename']);
-require __DIR__ . '/../../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -87,5 +87,3 @@ require __DIR__ . '/../../layouts/header.php';
         </div>
     </div>
 </div>
-
-<?php require __DIR__ . '/../../layouts/footer.php'; ?>

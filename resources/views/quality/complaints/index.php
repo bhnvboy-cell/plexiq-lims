@@ -1,6 +1,6 @@
 <?php
 $title = 'Customer Complaints & Investigation Management';
-require __DIR__ . '/../../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -125,5 +125,3 @@ require __DIR__ . '/../../layouts/header.php';
         </form>
     </div>
 </div>
-
-<?php require __DIR__ . '/../../layouts/footer.php'; ?>

@@ -1,6 +1,6 @@
 <?php
 $title = 'ICH Q1E Stability Regression & Shelf-Life Forecasting';
-require __DIR__ . '/../../layouts/header.php';
+layout('app');
 ?>
 
 <div class="container-fluid py-4">
@@ -133,5 +133,3 @@ function runRegression() {
     .catch(err => alert('Network error: ' + err.message));
 }
 </script>
-
-<?php require __DIR__ . '/../../layouts/footer.php'; ?>
