@@ -4,6 +4,13 @@
     <a href="/tests/pending" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
+<?php if (!empty($unqualifiedReason)): ?>
+<div class="alert alert-danger py-3 mb-3">
+    <i class="bi bi-shield-lock-fill me-2 fs-5"></i>
+    <strong>Training Gating Blocked:</strong> <?= htmlspecialchars($unqualifiedReason) ?>
+</div>
+<?php endif; ?>
+
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-3">
@@ -128,9 +135,9 @@
                     <div class="d-flex gap-2">
                         <?php if (!empty($nextTestId)): ?>
                         <input type="hidden" name="_next_test_id" value="<?= $nextTestId ?>">
-                        <button type="submit" class="btn btn-success btn-lg flex-fill"><i class="bi bi-save"></i> Save &amp; Next</button>
+                        <button type="submit" class="btn btn-success btn-lg flex-fill" <?= !empty($unqualifiedReason) ? 'disabled' : '' ?>><i class="bi bi-save"></i> Save &amp; Next</button>
                         <?php endif; ?>
-                        <button type="submit" class="btn btn-primary btn-lg flex-fill"><i class="bi bi-save"></i> Save Result</button>
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill" <?= !empty($unqualifiedReason) ? 'disabled' : '' ?>><i class="bi bi-save"></i> Save Result</button>
                     </div>
                 </form>
             </div>

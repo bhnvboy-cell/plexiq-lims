@@ -68,6 +68,11 @@ $router->post('/tests/{id}/review', [TestResultController::class, 'approveResult
 $router->get('/tests/final-approval', [TestResultController::class, 'finalApproval'], ['auth']);
 $router->post('/tests/{id}/final-approve', [TestResultController::class, 'finalApproveResult'], ['auth']);
 
+// Result Lineage & Retest
+$router->get('/results/{id}/lineage', [\App\Controllers\ResultLineageController::class, 'show'], ['auth']);
+$router->post('/results/{id}/invalidate', [\App\Controllers\ResultLineageController::class, 'invalidate'], ['auth']);
+$router->post('/sample-tests/{id}/retest', [\App\Controllers\ResultLineageController::class, 'retest'], ['auth']);
+
 // ============================================================
 // INSTRUMENT INTEGRATION
 // ============================================================

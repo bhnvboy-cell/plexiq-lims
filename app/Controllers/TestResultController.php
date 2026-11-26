@@ -83,12 +83,30 @@ class TestResultController extends BaseController
 
         $instruments = $db->query("SELECT id, instrument_code, instrument_name, next_calibration_date FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(\PDO::FETCH_ASSOC);
 
+        // Training qualification check
+        $trainingService = new \App\Services\TrainingGatingService();
+        $analystId = Auth::id() ?? 1;
+        $targetTestId = (int)($test['test_id'] ?? 0);
+        $targetAnalysisId = (int)($test['analysis_id'] ?? 0);
+        $isQualified = true;
+        $unqualifiedReason = '';
+
+        if ($targetTestId && !$trainingService->isQualified($analystId, 'test_method', $targetTestId)) {
+            $isQualified = false;
+            $unqualifiedReason = "Compliance Gate: Analyst is not certified/qualified to execute test method #{$targetTestId}. Complete required training protocol before recording results.";
+        } elseif ($targetAnalysisId && !$trainingService->isQualified($analystId, 'analysis', $targetAnalysisId)) {
+            $isQualified = false;
+            $unqualifiedReason = "Compliance Gate: Analyst is not certified/qualified to execute analysis #{$targetAnalysisId}. Complete required training protocol before recording results.";
+        }
+
         return $this->render('tests.result-entry', [
             'test' => $test,
             'result' => $existingResult,
             'revisions' => $revisions,
             'nextTestId' => $nextTest,
             'instruments' => $instruments,
+            'isQualified' => $isQualified,
+            'unqualifiedReason' => $unqualifiedReason,
         ]);
     }
 
@@ -152,6 +170,16 @@ class TestResultController extends BaseController
 
         if ($targetTestId && !$trainingService->isQualified($analystId, 'test_method', $targetTestId)) {
             session_flash('error', "Compliance Gate: Analyst is not certified/qualified to execute test method #{$targetTestId}. Complete required training protocol before testing.");
+            redirect('/tests/' . $sampleTestId . '/result');
+            return;
+        }
+
+        $analysisIdStmt = $db->prepare("SELECT analysis_id FROM sample_tests WHERE id = ?");
+        $analysisIdStmt->execute([$sampleTestId]);
+        $targetAnalysisId = (int)$analysisIdStmt->fetchColumn();
+
+        if ($targetAnalysisId && !$trainingService->isQualified($analystId, 'analysis', $targetAnalysisId)) {
+            session_flash('error', "Compliance Gate: Analyst is not certified/qualified to execute analysis #{$targetAnalysisId}. Complete required training protocol before testing.");
             redirect('/tests/' . $sampleTestId . '/result');
             return;
         }
@@ -270,6 +298,17 @@ class TestResultController extends BaseController
                 'value' => $value,
                 'is_within_spec' => $isWithinSpec,
             ]);
+
+            // Record ALCOA+ Result Lineage Snapshot
+            try {
+                $lineageService = new \App\Services\Results\ResultLineageService($db);
+                $lineageService->recordLineage($resultId, [
+                    'instrument_id' => $instrumentId,
+                    'analyst_id' => Auth::id()
+                ]);
+            } catch (\Throwable $lineageEx) {
+                error_log('Lineage recording warning: ' . $lineageEx->getMessage());
+            }
 
             // Phase 2: Statistical Out-of-Trend (OOT) Detection
             $ootMsg = '';
