@@ -12,7 +12,7 @@ use PDO;
 
 class SopController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.methods');
 
@@ -25,7 +25,7 @@ class SopController extends BaseController
              ORDER BY s.sop_number"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/sops/index', [
+        return $this->render('quality.sops.index', [
             'sops' => $sops
         ]);
     }

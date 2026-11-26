@@ -20,7 +20,7 @@ class CalculationFormulaController extends BaseController
         $this->engine = new CalculationEngine();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.methods');
 
@@ -34,7 +34,7 @@ class CalculationFormulaController extends BaseController
 
         $tests = $db->query("SELECT id, test_code, test_name FROM tests WHERE is_active = TRUE ORDER BY test_name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('formulas/index', [
+        return $this->render('formulas.index', [
             'formulas' => $formulas,
             'tests' => $tests
         ]);

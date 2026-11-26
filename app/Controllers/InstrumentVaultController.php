@@ -19,7 +19,7 @@ class InstrumentVaultController extends BaseController
         $this->vaultService = new InstrumentVaultService();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.instruments');
 
@@ -32,12 +32,12 @@ class InstrumentVaultController extends BaseController
              ORDER BY v.received_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('instruments/vault/index', [
+        return $this->render('instruments.vault.index', [
             'records' => $records
         ]);
     }
 
-    public function show(int $id): void
+    public function show(int $id): string
     {
         Auth::requirePermission('master.instruments');
 
@@ -48,12 +48,12 @@ class InstrumentVaultController extends BaseController
 
         if (!$vault) {
             $this->redirectWithError('/instruments/vault', 'Vault record not found.');
-            return;
+            return '';
         }
 
         $parsed = json_decode($vault['parsed_results'] ?? '[]', true);
 
-        $this->view('instruments/vault/show', [
+        return $this->render('instruments.vault.show', [
             'vault' => $vault,
             'parsedResults' => $parsed
         ]);

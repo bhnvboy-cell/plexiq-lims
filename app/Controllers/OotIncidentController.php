@@ -12,7 +12,7 @@ use PDO;
 
 class OotIncidentController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('results.review');
 
@@ -27,7 +27,7 @@ class OotIncidentController extends BaseController
              ORDER BY o.flagged_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('oot/index', [
+        return $this->render('oot.index', [
             'incidents' => $incidents
         ]);
     }

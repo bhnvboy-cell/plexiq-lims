@@ -82,28 +82,27 @@ class SampleHierarchyController extends BaseController
         }
     }
 
-    public function genealogy(int $id): void
+    public function genealogy(int $id): string
     {
         Auth::requirePermission('samples.view');
 
         try {
             $tree = $this->service->getGenealogyTree($id);
             if ($this->isJsonRequest() || isset($_GET['format']) && $_GET['format'] === 'json') {
-                $this->json(['success' => true, 'tree' => $tree]);
-                return;
+                return $this->json(['success' => true, 'tree' => $tree]);
             }
 
-            $this->view('samples/genealogy', [
+            return $this->render('samples.genealogy', [
                 'tree' => $tree,
                 'sample' => $tree['sample']
             ]);
         } catch (\Throwable $e) {
             if ($this->isJsonRequest()) {
-                $this->json(['error' => $e->getMessage()], 404);
-                return;
+                return $this->json(['error' => $e->getMessage()], 404);
             }
             $_SESSION['flash_error'] = $e->getMessage();
             $this->redirect('/samples');
+            return '';
         }
     }
 

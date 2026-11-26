@@ -14,7 +14,7 @@ class QualityAiController extends BaseController
         Auth::requireAuth();
         $db = Database::connect();
         $suggestions = $db->query("
-            SELECT s.*, u.first_name, u.last_name
+            SELECT s.*, u.full_name, u.username
             FROM ai_quality_suggestions s
             LEFT JOIN users u ON s.reviewed_by = u.id
             ORDER BY s.id DESC

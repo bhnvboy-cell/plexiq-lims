@@ -19,19 +19,19 @@ class LabelTemplateController extends BaseController
         $this->printer = new LabelPrinterService();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.products');
 
         $db = Database::connect();
         $templates = $db->query('SELECT * FROM label_templates ORDER BY label_type, name')->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('labels/templates', [
+        return $this->render('labels.templates', [
             'templates' => $templates
         ]);
     }
 
-    public function printSample(int $sampleId): void
+    public function printSample(int $sampleId): string
     {
         Auth::requirePermission('samples.view');
 
@@ -48,22 +48,21 @@ class LabelTemplateController extends BaseController
             }
 
             if ($this->isJsonRequest()) {
-                $this->json(['success' => true, 'label' => $label]);
-                return;
+                return $this->json(['success' => true, 'label' => $label]);
             }
 
             // Render preview page
-            $this->view('labels/preview', [
+            return $this->render('labels.preview', [
                 'label' => $label,
                 'sampleId' => $sampleId
             ]);
         } catch (\Throwable $e) {
             if ($this->isJsonRequest()) {
-                $this->json(['error' => $e->getMessage()], 400);
-                return;
+                return $this->json(['error' => $e->getMessage()], 400);
             }
             $_SESSION['flash_error'] = $e->getMessage();
             $this->redirect("/samples/{$sampleId}");
+            return '';
         }
     }
 

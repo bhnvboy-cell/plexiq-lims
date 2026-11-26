@@ -19,7 +19,7 @@ class StabilityRegressionController extends BaseController
         $this->service = new StabilityRegressionService();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('quality.manage');
 
@@ -31,7 +31,7 @@ class StabilityRegressionController extends BaseController
              ORDER BY ss.created_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/stability/regression', [
+        return $this->render('quality.stability.regression', [
             'studies' => $studies
         ]);
     }

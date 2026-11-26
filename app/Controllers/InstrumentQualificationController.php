@@ -12,7 +12,7 @@ use PDO;
 
 class InstrumentQualificationController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.instruments');
 
@@ -34,7 +34,7 @@ class InstrumentQualificationController extends BaseController
 
         $instruments = $db->query("SELECT id, instrument_code, instrument_name FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/instruments/qualifications', [
+        return $this->render('quality.instruments.qualifications', [
             'qualifications' => $qualifications,
             'impacts' => $impacts,
             'instruments' => $instruments

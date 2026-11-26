@@ -12,7 +12,7 @@ use PDO;
 
 class CustomerComplaintController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('quality.manage');
 
@@ -28,7 +28,7 @@ class CustomerComplaintController extends BaseController
 
         $customers = $db->query("SELECT id, customer_code, customer_name FROM customers WHERE is_active = TRUE ORDER BY customer_name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/complaints/index', [
+        return $this->render('quality.complaints.index', [
             'complaints' => $complaints,
             'customers' => $customers
         ]);

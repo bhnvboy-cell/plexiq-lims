@@ -19,7 +19,7 @@ class UncertaintyController extends BaseController
         $this->service = new UncertaintyBudgetService();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.methods');
 
@@ -34,7 +34,7 @@ class UncertaintyController extends BaseController
 
         $tests = $db->query("SELECT id, test_code, test_name FROM tests WHERE is_active = TRUE ORDER BY test_name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/uncertainty/index', [
+        return $this->render('quality.uncertainty.index', [
             'budgets' => $budgets,
             'tests' => $tests
         ]);

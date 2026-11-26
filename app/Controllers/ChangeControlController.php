@@ -12,7 +12,7 @@ use PDO;
 
 class ChangeControlController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('quality.manage');
 
@@ -25,7 +25,7 @@ class ChangeControlController extends BaseController
              ORDER BY cc.created_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/change-controls/index', [
+        return $this->render('quality.change-controls.index', [
             'changes' => $changes
         ]);
     }

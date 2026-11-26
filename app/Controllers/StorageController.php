@@ -19,7 +19,7 @@ class StorageController extends BaseController
         $this->service = new StorageManagementService();
     }
 
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('inventory.view');
 
@@ -32,30 +32,29 @@ class StorageController extends BaseController
              ORDER BY l.location_type, l.name"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('storage/index', [
+        return $this->render('storage.index', [
             'locations' => $locations
         ]);
     }
 
-    public function box(int $id): void
+    public function box(int $id): string
     {
         Auth::requirePermission('inventory.view');
 
         try {
             $data = $this->service->getBoxMatrix($id);
             if ($this->isJsonRequest()) {
-                $this->json(['success' => true, 'data' => $data]);
-                return;
+                return $this->json(['success' => true, 'data' => $data]);
             }
 
-            $this->view('storage/box', $data);
+            return $this->render('storage.box', $data);
         } catch (\Throwable $e) {
             if ($this->isJsonRequest()) {
-                $this->json(['error' => $e->getMessage()], 404);
-                return;
+                return $this->json(['error' => $e->getMessage()], 404);
             }
             $_SESSION['flash_error'] = $e->getMessage();
             $this->redirect('/storage');
+            return '';
         }
     }
 

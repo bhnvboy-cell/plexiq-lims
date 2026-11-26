@@ -13,7 +13,7 @@ use PDO;
 
 class InstrumentWorklistController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('master.instruments');
 
@@ -28,7 +28,7 @@ class InstrumentWorklistController extends BaseController
 
         $instruments = $db->query("SELECT id, instrument_code, instrument_name FROM instruments WHERE is_active = TRUE ORDER BY instrument_name")->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('instruments/worklists/index', [
+        return $this->render('instruments.worklists.index', [
             'worklists' => $worklists,
             'instruments' => $instruments
         ]);

@@ -12,7 +12,7 @@ use PDO;
 
 class FmeaRiskController extends BaseController
 {
-    public function index(): void
+    public function index(): string
     {
         Auth::requirePermission('quality.manage');
 
@@ -24,7 +24,7 @@ class FmeaRiskController extends BaseController
              ORDER BY f.rpn DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $this->view('quality/fmea/index', [
+        return $this->render('quality.fmea.index', [
             'assessments' => $assessments
         ]);
     }

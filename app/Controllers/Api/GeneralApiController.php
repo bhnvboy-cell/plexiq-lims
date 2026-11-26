@@ -338,9 +338,13 @@ class GeneralApiController extends BaseController
 
     public function unreadCount(): string
     {
+        $userId = $_REQUEST['_api_user_id'] ?? \App\Helpers\Auth::id();
+        if (!$userId) {
+            return $this->json(['unread_count' => 0]);
+        }
         $db = Database::connect();
         $stmt = $db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = FALSE");
-        $stmt->execute([$_REQUEST['_api_user_id']]);
+        $stmt->execute([$userId]);
         return $this->json(['unread_count' => (int)$stmt->fetchColumn()]);
     }
 

@@ -34,7 +34,7 @@ $router->get('/api/coa/{sampleId}', [\App\Controllers\Api\GeneralApiController::
 $router->get('/api/products', [\App\Controllers\Api\GeneralApiController::class, 'listProducts'], ['api']);
 $router->get('/api/customers', [\App\Controllers\Api\GeneralApiController::class, 'listCustomers'], ['api']);
 $router->get('/api/notifications', [\App\Controllers\Api\GeneralApiController::class, 'myNotifications'], ['api']);
-$router->get('/api/notifications/unread', [\App\Controllers\Api\GeneralApiController::class, 'unreadCount'], ['api']);
+$router->get('/api/notifications/unread', [\App\Controllers\Api\GeneralApiController::class, 'unreadCount']);
 $router->get('/api/barcode/lookup', [\App\Controllers\Api\GeneralApiController::class, 'barcodeLookup'], ['api']);
 
 // Phase 2: Core LIMS API
