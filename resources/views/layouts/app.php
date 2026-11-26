@@ -41,11 +41,17 @@
             </a>
 
             <div class="nav-section-label">Quality Control</div>
+            <a href="/specifications" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/specifications') ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-ruled"></i><span>Specifications</span>
+            </a>
+            <a href="/product-test-plans" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/product-test-plans') ? 'active' : '' ?>">
+                <i class="bi bi-diagram-3-fill"></i><span>Product Test Plans</span>
+            </a>
             <a href="/production-lots" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/production-lots') ? 'active' : '' ?>">
                 <i class="bi bi-boxes"></i><span>Production Lots</span>
             </a>
             <a href="/lab-batches" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/lab-batches') ? 'active' : '' ?>">
-                <i class="bi bi-flask"></i><span>Lab Batches (Runs)</span>
+                <i class="bi bi-collection-play"></i><span>Lab Batches (Runs)</span>
             </a>
             <a href="/samples" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/samples') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i><span>Samples</span>
@@ -69,8 +75,8 @@
                 <i class="bi bi-tablet"></i><span>Bench Mode</span>
             </a>
             <?php if (in_array($auth['role'], ['Reviewer', 'Approver', 'Admin'])): ?>
-            <a href="/tests/review" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/tests/review') ? 'active' : '' ?>">
-                <i class="bi bi-check-circle"></i><span>Review</span>
+            <a href="/results/review-by-exception" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/results/review-by-exception') || str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/tests/review') ? 'active' : '' ?>">
+                <i class="bi bi-check-circle"></i><span>Review by Exception</span>
             </a>
             <?php endif; ?>
             <?php if (in_array($auth['role'], ['Approver', 'Admin'])): ?>
@@ -94,8 +100,14 @@
             </a>
 
             <div class="nav-section-label">Quality Events</div>
+            <a href="/change-controls" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/change-control') ? 'active' : '' ?>">
+                <i class="bi bi-arrow-repeat"></i><span>Change Controls</span>
+            </a>
             <a href="/oos" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/oos') ? 'active' : '' ?>">
                 <i class="bi bi-exclamation-triangle"></i><span>OOS</span>
+            </a>
+            <a href="/oot" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/oot') ? 'active' : '' ?>">
+                <i class="bi bi-graph-up-arrow"></i><span>OOT Trends</span>
             </a>
             <a href="/capa" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/capa') ? 'active' : '' ?>">
                 <i class="bi bi-shield-check"></i><span>CAPA</span>
@@ -241,7 +253,7 @@
                 <div class="header-breadcrumb">
                     <span class="breadcrumb-item">PlexiQ</span>
                     <span class="breadcrumb-sep">/</span>
-                    <span class="breadcrumb-item active"><?= $title ?? 'Dashboard' ?></span>
+                    <span class="breadcrumb-item active"><?= htmlspecialchars($title ?? ucwords(str_replace(['-', '/'], [' ', ' > '], trim(explode('?', $_SERVER['REQUEST_URI'] ?? '')[0], '/')) ?: 'Dashboard')) ?></span>
                 </div>
             </div>
             <div class="header-right">

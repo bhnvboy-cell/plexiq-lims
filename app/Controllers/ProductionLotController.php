@@ -31,7 +31,7 @@ class ProductionLotController extends BaseController
 
         $lots = ProductionLot::allWithRelations($filters);
         $db = Database::connect();
-        $products = $db->query("SELECT id, product_code, product_name FROM products WHERE is_active = TRUE ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
+        $products = $db->query("SELECT id, product_code, product_name FROM products WHERE is_active = TRUE AND product_code NOT LIKE 'PROD-OOT-%' ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
 
         return $this->render('production-lots.index', [
             'lots' => $lots,
@@ -46,7 +46,7 @@ class ProductionLotController extends BaseController
         Auth::requireAnyRole(['Admin', 'Analyst', 'Approver']);
 
         $db = Database::connect();
-        $products = $db->query("SELECT id, product_code, product_name FROM products WHERE is_active = TRUE ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
+        $products = $db->query("SELECT id, product_code, product_name FROM products WHERE is_active = TRUE AND product_code NOT LIKE 'PROD-OOT-%' ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
         $sites = $db->query("SELECT id, name FROM sites WHERE is_active = TRUE ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
         return $this->render('production-lots.create', [

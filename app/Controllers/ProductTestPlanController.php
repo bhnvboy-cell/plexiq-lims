@@ -27,7 +27,7 @@ class ProductTestPlanController extends BaseController
         Auth::requireAnyRole(['Admin', 'Approver', 'Reviewer', 'Analyst']);
 
         $db = Database::connect();
-        $products = $db->query("SELECT * FROM products WHERE is_active = TRUE ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
+        $products = $db->query("SELECT * FROM products WHERE is_active = TRUE AND product_code NOT LIKE 'PROD-OOT-%' ORDER BY product_name")->fetchAll(PDO::FETCH_ASSOC);
 
         $productId = isset($_GET['product_id']) ? (int)$_GET['product_id'] : 0;
         if ($productId <= 0 && !empty($products)) {

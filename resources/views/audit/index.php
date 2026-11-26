@@ -1,10 +1,25 @@
-<?php layout('app'); ?>
-<div class="d-flex justify-content-between align-items-center mb-4">
+<?php 
+layout('app'); 
+$title = 'Audit Trail';
+?>
+<div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="page-title mb-1"><i class="bi bi-journal-text me-2"></i>Audit Trail</h4>
-        <span class="text-muted small"><?= $total ?> total records</span>
+        <h4 class="page-title mb-1"><i class="bi bi-journal-text me-2 text-primary"></i>Audit Trail & Forensic Log</h4>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                <i class="bi bi-shield-check me-1"></i>ALCOA+ SHA-256 Hash Chaining Active
+            </span>
+            <span class="text-muted small"><?= $total ?> total audited events</span>
+        </div>
     </div>
-    <a href="/audit/login-history" class="btn btn-outline-primary btn-sm"><i class="bi bi-clock-history me-1"></i>Login History</a>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i>Print / Export
+        </button>
+        <a href="/audit/login-history" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-clock-history me-1"></i>Login History
+        </a>
+    </div>
 </div>
 
 <div class="filter-section">

@@ -190,3 +190,14 @@ WHERE parameter_code = 'DP1-001';
 UPDATE batches SET 
     notes = 'Pharmaceutical production batch for commercial release'
 WHERE notes LIKE '%Starch%' OR notes LIKE '%Glucose%' OR notes = 'Beta batch for testing';
+
+-- 5. Update legacy specifications referencing Starch or Glucose
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-001', grade = 'USP-NF' WHERE spec_code = 'SPEC-STARCH-001';
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-002', grade = 'Ph. Eur.' WHERE spec_code = 'SPEC-STARCH-002';
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-003', grade = 'BP' WHERE spec_code = 'SPEC-STARCH-003';
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-004', grade = 'USP' WHERE spec_code = 'SPEC-GLUCOSE-001';
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-005', grade = 'BP' WHERE spec_code = 'SPEC-GLUCOSE-002';
+UPDATE specifications SET spec_code = 'SPEC-PHARMA-006', grade = 'Ph. Eur.' WHERE spec_code = 'SPEC-GLUCOSE-003';
+UPDATE specifications SET grade = 'USP' WHERE grade = 'Starch';
+UPDATE specifications SET grade = 'Ph. Eur.' WHERE grade = 'Glucose';
+

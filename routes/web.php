@@ -660,6 +660,7 @@ $router->get('/labels/print/{id}', [\App\Controllers\LabelTemplateController::cl
 // ============================================================
 // 1. Change Control Workflow
 $router->get('/change-controls', [\App\Controllers\ChangeControlController::class, 'index'], ['auth']);
+$router->get('/change-control', [\App\Controllers\ChangeControlController::class, 'index'], ['auth']);
 $router->post('/change-controls', [\App\Controllers\ChangeControlController::class, 'store'], ['auth']);
 $router->post('/change-controls/{id}/pre-approve', [\App\Controllers\ChangeControlController::class, 'preApprove'], ['auth']);
 

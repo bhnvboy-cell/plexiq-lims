@@ -43,8 +43,9 @@
                 <a href="/samples" class="btn btn-sm btn-outline-primary">View All</a>
             </div>
             <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead><tr><th>Sample Code</th><th>Customer</th><th>Product</th><th>Status</th><th>Priority</th><th>Created</th></tr></thead>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th>Sample Code</th><th>Customer</th><th>Product</th><th>Status</th><th>Priority</th><th class="text-nowrap">Created</th></tr></thead>
                     <tbody>
                         <?php foreach ($recentSamples as $s): ?>
                         <tr>
@@ -65,6 +66,7 @@
                         <?php endif; ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>
