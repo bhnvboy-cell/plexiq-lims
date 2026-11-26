@@ -9,7 +9,8 @@
 
 PlexiQ LIMS is a high-performance, enterprise-grade Laboratory Information Management System designed for QC/QA, research, and regulated life-sciences laboratories (pharmaceutical, biotech, clinical diagnostics, chemical, environmental, food & beverage).
 
-Closing commercial, scientific, and regulatory gaps against tier-1 systems (LabWare, STARLIMS, LabVantage, Thermo SampleManager), PlexiQ delivers end-to-end sample lifecycle tracking, immutable ALCOA+ audit trails, multi-facility tenancy, instrument automation, ERP bus integration (SAP S/4HANA, Oracle Cloud, Microsoft Dynamics 365), clinical HL7/FHIR gateway, dynamic form schema engines, and AI-assisted quality diagnostics.
+Closing commercial, scientific, and regulatory gaps against tier-1 systems (LabWare, STARLIMS, LabVantage, Thermo SampleManager), PlexiQ delivers end-to-end sample lifecycle tracking, immutable ALCOA+ audit trails, multi-facility tenancy, instrument automation, ERP bus integration (SAP S/4HANA, Oracle Cloud, Microsoft Dynamics 365), clinical HL7/FHIR gateway, dynamic form schema engines, AI-assisted quality diagnostics, and the commercial LIMS workflow backbone:
+$$\text{Product} \longrightarrow \text{Versioned Spec} \longrightarrow \text{Analysis} \longrightarrow \text{Component} \longrightarrow \text{Sample} \longrightarrow \text{Lab Batch} \longrightarrow \text{Result} \longrightarrow \text{Review} \longrightarrow \text{Approval} \longrightarrow \text{COA} \longrightarrow \text{Lot Disposition} \longrightarrow \text{ERP}$$
 
 ## Screenshots
 
@@ -71,6 +72,17 @@ Closing commercial, scientific, and regulatory gaps against tier-1 systems (LabW
 - **CycloneDX 1.5 SBOM & Vulnerability Scanner (`/ops/sbom`)**: Built-in Software Bill of Materials (SBOM) generator in CycloneDX 1.5 JSON standard with automated open-source license scanning.
 - **PostgreSQL Table Partitioning Strategy (`/ops/partitioning`)**: Partitioning monitor for Hot, Warm, and Cold tiering of high-volume `audit_logs` and `results` tables.
 
+### 7. Commercial LIMS Architecture & Quality Spine (Migrations 025–028)
+- **Versioned Specifications & Limits (`/specifications`, `/product-test-plans`)**: 4-layer master data model (`products` &rarr; `specifications` & `specification_versions` &rarr; `analyses` &rarr; `components` &rarr; `specification_limits`). Database-level trigger `trg_spec_version_immutability` guarantees approved specification versions are completely immutable. Effective-date range resolution ensures samples logged today automatically lock to current active limits.
+- **Sample Entry Follows the Product (`/samples/create`, `/sample-templates`)**: At sample login, product and stage (raw material, in-process, finished, stability) automatically determine the analytical test plan and attach the effective specification version. Adding or removing tests requires explicit permissions, captures mandatory justification, and logs full audit entries.
+- **Frozen Limit Snapshots**: Each result row snapshots the active specification version ID, specification min/max, warn/reject bounds, and LOQ at test assignment time. Future specification revisions or parameter edits will never retroactively mutate historical released release results.
+- **Disambiguated Batch Architecture**:
+  - **Production Lots (`/production-lots`)**: Manufacturing batches, shipments, and inventory lots with quality disposition workflows (`Pending`, `Released`, `Rejected`, `Conditionally Released`, `Quarantine`). Release decisions require dual-credential 21 CFR Part 11 e-signatures and post usage decisions to ERP connectors with idempotency keys and retry reconciliation.
+  - **Lab Batches / Worklists (`/lab-batches`)**: Analytical instrument run sequences combining unknown specimens with quality control standards (Blank, Calibration Standard, QC Control, Duplicate, Matrix Spike). Automated Westgard / control failure rules flag and invalidate affected results, automatically requeuing tests with audited reasons. Reuses Waters Empower, Agilent OpenLab CDS, and Thermo Chromeleon sequence drivers.
+- **Result Flow End-to-End & Forensic Lineage (`/results/{id}/lineage`)**: Complete data trace from raw instrument data vault file (SHA-256 integrity hash), formula AST calculation engine, spec version snapshot, qualified instrument, qualified analyst, to final COA.
+- **Review by Exception & Retest Governance**: Gathers flagged, overridden, retested, and out-of-limit results into a high-priority reviewer queue. Segregation of duties prevents analysts from approving their own entries. Formal retest and result invalidation requires audited justifications.
+- **ERP Quality Bus & Reconciliation (`/erp/reconciliation`, `/production-lots/{id}/release-report`)**: Production lot release reports and two-way ERP sync reconciliation monitoring inspection lots and usage decisions across SAP, Oracle, and Microsoft Dynamics.
+
 ---
 
 ## Technical Specifications
@@ -118,7 +130,7 @@ DB_PASSWORD=your_password
 psql -U postgres -d limsdb -f database/schema.sql
 psql -U postgres -d limsdb -f database/seed_data.sql
 
-# Apply all migrations (001 through 024)
+# Apply all migrations (001 through 028)
 for %f in (database\migrations\*.sql) do psql -U postgres -d limsdb -f "%f"
 ```
 
@@ -176,7 +188,7 @@ php bin/console cache:clear
 The test suite validates compliance, scientific calculations, integrations, and security boundaries across all modules:
 
 ```bash
-# Run complete test suite (138 tests, 2,840 assertions)
+# Run complete test suite (158 tests, 3,131 assertions)
 php -d extension=pdo_pgsql -d extension=pgsql phpunit.phar
 
 # Run Unit tests only
@@ -216,8 +228,8 @@ plexiq-lims/
 │   ├── edge-agent.php      # Edge IoT collector service
 │   └── worker.php          # Background job queue worker
 ├── database/
-│   ├── migrations/         # Schema migrations (001_initial.sql through 024_scale_multisite.sql)
-│   ├── migrations/rollbacks/ # Rollback SQL scripts for every migration
+│   ├── migrations/         # Schema migrations (001_initial.sql through 028_result_flow_and_lineage.sql)
+│   ├── migrations/rollbacks/ # Rollback SQL scripts for every migration (001 through 028)
 │   ├── schema.sql          # Baseline PostgreSQL schema
 │   └── seed_data.sql       # Initial master tables and roles
 ├── public/                 # Web server document root
