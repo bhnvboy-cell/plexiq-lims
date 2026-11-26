@@ -37,8 +37,10 @@ class SampleController extends BaseController
     {
         Auth::requireAnyRole(['Admin', 'Analyst']);
         $customers = Customer::active();
-        $products = Product::active();
+        $db = \App\Helpers\Database::connect();
+        $products = $db->query("SELECT * FROM products WHERE is_active = TRUE ORDER BY product_name")->fetchAll(\PDO::FETCH_ASSOC);
         $tests = TestItem::allWithDetails();
+        $templates = \App\Models\SampleTemplate::active();
         $analysts = User::analysts();
         $reviewers = User::reviewers();
         $approvers = User::approvers();
@@ -47,6 +49,8 @@ class SampleController extends BaseController
             'customers' => $customers,
             'products' => $products,
             'tests' => $tests,
+            'templates' => $templates,
+            'stages' => ['Raw Material', 'In-Process', 'Finished Good', 'Stability', 'Release', 'Packaging'],
             'analysts' => $analysts,
             'reviewers' => $reviewers,
             'approvers' => $approvers,
@@ -57,6 +61,36 @@ class SampleController extends BaseController
     {
         Auth::requireAnyRole(['Admin', 'Analyst']);
 
+        $productId = !empty($_POST['product_id']) ? (int)$_POST['product_id'] : null;
+
+        // If a product is selected, use the Commercial LIMS Automated Registration Pipeline
+        if ($productId) {
+            try {
+                $service = new \App\Services\Samples\CommercialSampleService();
+                $res = $service->registerSample($_POST, Auth::id() ?? 1);
+
+                Sample::flushDashboardCache();
+                try {
+                    \App\Services\WebhookDispatcher::dispatch('sample.created', [
+                        'sample_id' => $res['sample_id'],
+                        'sample_code' => $res['sample_code']
+                    ]);
+                } catch (\Throwable $e) {
+                    error_log('Webhook dispatch failed: ' . $e->getMessage());
+                }
+
+                $specInfo = !empty($res['spec_code']) ? " [Spec {$res['spec_code']} v{$res['spec_version_number']}.0]" : "";
+                session_flash('success', "Sample {$res['sample_code']} registered{$specInfo} with {$res['total_analyses']} analyses auto-assigned.");
+                redirect('/samples/' . $res['sample_id']);
+                return;
+            } catch (\Exception $e) {
+                session_flash('error', 'Error in commercial sample registration: ' . $e->getMessage());
+                redirect('/samples/create');
+                return;
+            }
+        }
+
+        // Legacy Fallback Registration (No product specified)
         $db = \App\Helpers\Database::connect();
         $db->beginTransaction();
 
@@ -74,7 +108,7 @@ class SampleController extends BaseController
             $stmt->execute([
                 $sampleCode,
                 $_POST['customer_id'] ?: null,
-                $_POST['product_id'] ?: null,
+                null,
                 $_POST['batch_number'] ?: null,
                 $_POST['batch_size'] ?: null,
                 $_POST['manufacture_date'] ?: null,
@@ -135,6 +169,8 @@ class SampleController extends BaseController
         $reviewers = User::reviewers();
         $approvers = User::approvers();
         $custody = \App\Models\ChainOfCustody::findBySample($id);
+        $db = \App\Helpers\Database::connect();
+        $analyses = $db->query("SELECT id, analysis_code, analysis_name FROM analyses WHERE is_active = TRUE ORDER BY analysis_code")->fetchAll(\PDO::FETCH_ASSOC);
 
         return $this->render('samples.show', [
             'sample' => $sample,
@@ -143,6 +179,7 @@ class SampleController extends BaseController
             'reviewers' => $reviewers,
             'approvers' => $approvers,
             'custody' => $custody,
+            'analyses' => $analyses,
         ]);
     }
 
@@ -312,6 +349,68 @@ class SampleController extends BaseController
         } catch (\Exception $e) {
             $db->rollBack();
             session_flash('error', 'Error assigning tests: ' . $e->getMessage());
+        }
+        redirect('/samples/' . $id);
+    }
+
+    public function addTest(int $id): void
+    {
+        Auth::requireAnyRole(['Admin', 'Analyst']);
+        $analysisId = !empty($_POST['analysis_id']) ? (int)$_POST['analysis_id'] : 0;
+        $reason = trim($_POST['reason'] ?? '');
+        if (!$analysisId || empty($reason)) {
+            session_flash('error', 'Analysis and mandatory justification reason are required.');
+            redirect('/samples/' . $id);
+            return;
+        }
+
+        try {
+            $service = new \App\Services\Samples\CommercialSampleService();
+            $service->addSampleTest($id, $analysisId, $reason, Auth::id() ?? 1);
+            session_flash('success', 'Ad-hoc analysis added and limits snapshot frozen.');
+        } catch (\Throwable $e) {
+            session_flash('error', 'Failed to add analysis: ' . $e->getMessage());
+        }
+        redirect('/samples/' . $id);
+    }
+
+    public function removeTest(int $testId): void
+    {
+        Auth::requireAnyRole(['Admin', 'Analyst']);
+        $sampleId = !empty($_POST['sample_id']) ? (int)$_POST['sample_id'] : 0;
+        $reason = trim($_POST['reason'] ?? '');
+        if (empty($reason)) {
+            session_flash('error', 'Mandatory justification reason is required to remove an analysis.');
+            redirect($sampleId ? '/samples/' . $sampleId : '/samples');
+            return;
+        }
+
+        try {
+            $service = new \App\Services\Samples\CommercialSampleService();
+            $service->removeSampleTest($testId, $reason, Auth::id() ?? 1);
+            session_flash('success', 'Analysis removed and audited.');
+        } catch (\Throwable $e) {
+            session_flash('error', 'Failed to remove analysis: ' . $e->getMessage());
+        }
+        redirect($sampleId ? '/samples/' . $sampleId : '/samples');
+    }
+
+    public function transition(int $id): void
+    {
+        Auth::requireAuth();
+        $targetStatus = $_POST['target_status'] ?? '';
+        if (empty($targetStatus)) {
+            session_flash('error', 'Target status is required.');
+            redirect('/samples/' . $id);
+            return;
+        }
+
+        try {
+            $service = new \App\Services\Samples\CommercialSampleService();
+            $res = $service->transitionStatus($id, $targetStatus, Auth::id() ?? 1, $_POST);
+            session_flash('success', "Sample status transitioned to {$targetStatus}.");
+        } catch (\Throwable $e) {
+            session_flash('error', 'Status transition blocked: ' . $e->getMessage());
         }
         redirect('/samples/' . $id);
     }

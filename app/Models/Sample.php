@@ -27,7 +27,9 @@ class Sample extends BaseModel
                    a.full_name AS analyst_name,
                    r.full_name AS reviewer_name,
                    ap.full_name AS approver_name,
-                   reg.full_name AS registered_by_name
+                   reg.full_name AS registered_by_name,
+                   sv.version_number AS spec_version_number,
+                   sp.spec_code, sp.grade AS spec_grade
             FROM samples s
             LEFT JOIN customers c ON s.customer_id = c.id
             LEFT JOIN products p ON s.product_id = p.id
@@ -35,6 +37,8 @@ class Sample extends BaseModel
             LEFT JOIN users r ON s.assigned_reviewer_id = r.id
             LEFT JOIN users ap ON s.assigned_approver_id = ap.id
             LEFT JOIN users reg ON s.registered_by = reg.id
+            LEFT JOIN specification_versions sv ON s.spec_version_id = sv.id
+            LEFT JOIN specifications sp ON sv.specification_id = sp.id
             WHERE s.id = ?
         ");
         $stmt->execute([$id]);

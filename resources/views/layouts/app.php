@@ -47,6 +47,9 @@
             <a href="/samples" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/samples') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i><span>Samples</span>
             </a>
+            <a href="/sample-templates" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/sample-templates') ? 'active' : '' ?>">
+                <i class="bi bi-box-seam"></i><span>Sample Templates</span>
+            </a>
             <a href="/coc" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/coc') ? 'active' : '' ?>">
                 <i class="bi bi-signpost-2"></i><span>Chain of Custody</span>
             </a>

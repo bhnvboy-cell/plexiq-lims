@@ -48,7 +48,14 @@ $router->get('/samples/{id}', [SampleController::class, 'show'], ['auth']);
 $router->get('/samples/{id}/edit', [SampleController::class, 'edit'], ['auth']);
 $router->post('/samples/{id}', [SampleController::class, 'update'], ['auth']);
 $router->post('/samples/{id}/workflow', [SampleController::class, 'updateWorkflow'], ['auth']);
+$router->post('/samples/{id}/transition', [SampleController::class, 'transition'], ['auth']);
 $router->post('/samples/{id}/assign-tests', [SampleController::class, 'assignTests'], ['auth']);
+$router->post('/samples/{id}/add-test', [SampleController::class, 'addTest'], ['auth']);
+$router->post('/samples/tests/{id}/remove', [SampleController::class, 'removeTest'], ['auth']);
+
+// Sample Templates
+$router->get('/sample-templates', [\App\Controllers\SampleTemplateController::class, 'index'], ['auth']);
+$router->post('/sample-templates', [\App\Controllers\SampleTemplateController::class, 'store'], ['auth']);
 
 // ============================================================
 // TEST & RESULTS
