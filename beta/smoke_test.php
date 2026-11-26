@@ -280,6 +280,10 @@ $pages = [
     ['/coa/' . $coaSampleId . '/pdf', 200],
     ['/labels/sample/' . $sampleId, 200],
     ['/labels/batch/' . $batchId, 200],
+    // Commercial Master Data: Specifications & Test Plans
+    ['/specifications', 200],
+    ['/specifications/create', 200],
+    ['/product-test-plans', 200],
 ];
 
 $failures = [];

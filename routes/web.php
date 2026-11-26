@@ -719,5 +719,21 @@ $router->get('/ops/queue', [\App\Controllers\OpsController::class, 'queue'], ['a
 $router->get('/ops/sbom', [\App\Controllers\OpsController::class, 'sbom'], ['auth']);
 $router->get('/ops/partitioning', [\App\Controllers\OpsController::class, 'partitioning'], ['auth']);
 
+// ============================================================
+// COMMERCIAL MASTER DATA: SPECIFICATIONS & PRODUCT TEST PLANS
+// ============================================================
+$router->get('/specifications', [\App\Controllers\SpecificationController::class, 'index'], ['auth']);
+$router->get('/specifications/create', [\App\Controllers\SpecificationController::class, 'create'], ['auth']);
+$router->post('/specifications', [\App\Controllers\SpecificationController::class, 'store'], ['auth']);
+$router->get('/specifications/{id}', [\App\Controllers\SpecificationController::class, 'show'], ['auth']);
+$router->post('/specifications/{id}/draft', [\App\Controllers\SpecificationController::class, 'createDraft'], ['auth']);
+$router->post('/specifications/versions/{id}/approve', [\App\Controllers\SpecificationController::class, 'approve'], ['auth']);
+$router->post('/specifications/versions/{id}/limits', [\App\Controllers\SpecificationController::class, 'addLimit'], ['auth']);
+
+$router->get('/product-test-plans', [\App\Controllers\ProductTestPlanController::class, 'index'], ['auth']);
+$router->post('/product-test-plans/assign', [\App\Controllers\ProductTestPlanController::class, 'assign'], ['auth']);
+$router->post('/product-test-plans/remove', [\App\Controllers\ProductTestPlanController::class, 'remove'], ['auth']);
+
+
 
 

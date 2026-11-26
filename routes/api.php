@@ -69,6 +69,10 @@ $router->post('/api/quality/ai-advisor/analyze', [\App\Controllers\QualityAiCont
 // Phase 7: Scale & Security API
 $router->get('/api/ops/sbom', [\App\Controllers\OpsController::class, 'sbomJson'], ['api']);
 
+// Commercial Master Data: Specifications & Resolution API
+$router->get('/api/products/{id}/resolve-plan', [\App\Controllers\ProductTestPlanController::class, 'resolvePlan']);
+
+
 // ============================================================
 // SCIM 2.0 PROTOCOL ENDPOINTS
 // ============================================================
