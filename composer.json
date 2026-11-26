@@ -12,8 +12,7 @@
     },
     "require-dev": {
         "ext-pdo": "*",
-        "ext-pgsql": "*",
-        "phpunit/phpunit": "^9.5"
+        "ext-pgsql": "*"
     },
     "suggest": {
         "ext-odbc": "For SAP HANA ODBC direct connection",
@@ -44,16 +43,7 @@
         "test:ci": "phpunit --coverage-text --log-junit storage/logs/test-results.xml"
     },
     "config": {
-        "disable-tls": true,
         "optimize-autoloader": true,
-        "sort-packages": true,
-        "platform": {
-            "php": "8.1"
-        }
-    },
-    "repositories": [{
-        "name": "packagist",
-        "type": "composer",
-        "url": "https://repo.packagist.org"
-    }]
+        "sort-packages": true
+    }
 }
