@@ -29,7 +29,7 @@ require_once $autoload;
 // Load helpers
 require_once BASE_PATH . '/app/Helpers/helpers.php';
 
-// Load test environment if present
+// Load test environment if present (without overwriting explicitly provided environment variables, e.g. in CI)
 $envFile = BASE_PATH . '/.env.testing';
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -38,8 +38,10 @@ if (file_exists($envFile)) {
         [$key, $value] = explode('=', $line, 2);
         $key = trim($key);
         $value = trim($value);
-        $_ENV[$key] = $value;
-        putenv("$key=$value");
+        if (getenv($key) === false || getenv($key) === '') {
+            $_ENV[$key] = $value;
+            putenv("$key=$value");
+        }
     }
 }
 

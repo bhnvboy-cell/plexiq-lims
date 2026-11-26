@@ -69,22 +69,31 @@ switch ($command) {
                 echo "Created database: {$safeDb}\n";
                 \App\Helpers\Database::disconnect();
                 $db = \App\Helpers\Database::connect();
-                $schemaFile = __DIR__ . '/../database/schema.sql';
-                if (file_exists($schemaFile)) {
-                    $db->exec((string)file_get_contents($schemaFile));
-                    echo "Applied base schema: schema.sql\n";
-                }
-                $seedFile = __DIR__ . '/../database/seed_data.sql';
-                if (file_exists($seedFile)) {
-                    try {
-                        $db->exec((string)file_get_contents($seedFile));
-                        echo "Applied base seed data: seed_data.sql\n";
-                    } catch (\Throwable $se) {
-                        fwrite(STDERR, "Warning applying seed_data.sql: " . $se->getMessage() . "\n");
-                    }
-                }
             } else {
                 throw $e;
+            }
+        }
+
+        // Check if baseline schema is already applied
+        $hasBaseTables = false;
+        try {
+            $hasBaseTables = (bool)$db->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'users'")->fetchColumn();
+        } catch (\Throwable $e) {}
+
+        if (!$hasBaseTables) {
+            $schemaFile = __DIR__ . '/../database/schema.sql';
+            if (file_exists($schemaFile)) {
+                $db->exec((string)file_get_contents($schemaFile));
+                echo "Applied base schema: schema.sql\n";
+            }
+            $seedFile = __DIR__ . '/../database/seed_data.sql';
+            if (file_exists($seedFile)) {
+                try {
+                    $db->exec((string)file_get_contents($seedFile));
+                    echo "Applied base seed data: seed_data.sql\n";
+                } catch (\Throwable $se) {
+                    fwrite(STDERR, "Warning applying seed_data.sql: " . $se->getMessage() . "\n");
+                }
             }
         }
         $migrationDir = __DIR__ . '/../database/migrations';

@@ -17,16 +17,21 @@ $title = 'ERP Reconciliation & Usage Decisions';
 
     <!-- Active Connectors Summary -->
     <div class="row mb-4">
-        <?php foreach ($connectors as $conn): ?>
+        <?php foreach ($connectors as $conn): 
+            $connName = $conn['name'] ?? $conn['connector_name'] ?? 'ERP Connector';
+            $connStatus = $conn['status'] ?? (!empty($conn['is_active']) ? 'Active' : 'Inactive');
+            $connType = $conn['type'] ?? $conn['connector_type'] ?? 'REST / RFC';
+            $connUrl = $conn['endpoint_url'] ?? $conn['base_url'] ?? 'https://api.erp.internal';
+        ?>
             <div class="col-md-4">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0"><?= htmlspecialchars($conn['name']) ?></h6>
-                            <span class="badge bg-<?= $conn['status'] === 'Active' ? 'success' : 'secondary' ?>"><?= $conn['status'] ?></span>
+                            <h6 class="fw-bold mb-0"><?= htmlspecialchars($connName) ?></h6>
+                            <span class="badge bg-<?= $connStatus === 'Active' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($connStatus) ?></span>
                         </div>
-                        <div class="small text-muted mb-1">Type: <code><?= htmlspecialchars($conn['type']) ?></code></div>
-                        <div class="small text-muted">Endpoint: <code><?= htmlspecialchars($conn['endpoint_url']) ?></code></div>
+                        <div class="small text-muted mb-1">Type: <code><?= htmlspecialchars($connType) ?></code></div>
+                        <div class="small text-muted">Endpoint: <code><?= htmlspecialchars($connUrl) ?></code></div>
                     </div>
                 </div>
             </div>
