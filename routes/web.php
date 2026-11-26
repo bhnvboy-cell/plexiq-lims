@@ -325,6 +325,27 @@ $router->post('/batches/remove-test/{sampleTestId}', [BatchController::class, 'r
 $router->get('/batches/product-tests/{productId}', [BatchController::class, 'getProductTestsJson'], ['auth']);
 
 // ============================================================
+// COMMERCIAL LIMS: PRODUCTION LOTS & LAB BATCHES (Two Kinds of Batch)
+// ============================================================
+// Production Lots (Manufacturing & Material Release)
+$router->get('/production-lots', [\App\Controllers\ProductionLotController::class, 'index'], ['auth']);
+$router->get('/production-lots/create', [\App\Controllers\ProductionLotController::class, 'create'], ['auth']);
+$router->post('/production-lots', [\App\Controllers\ProductionLotController::class, 'store'], ['auth']);
+$router->get('/production-lots/{id}', [\App\Controllers\ProductionLotController::class, 'show'], ['auth']);
+$router->post('/production-lots/{id}/disposition', [\App\Controllers\ProductionLotController::class, 'setDisposition'], ['auth']);
+$router->post('/production-lots/{id}/sync-erp', [\App\Controllers\ProductionLotController::class, 'syncErp'], ['auth']);
+
+// Lab Batches (Analytical Worklists, Sequences & Controls)
+$router->get('/lab-batches', [\App\Controllers\LabBatchController::class, 'index'], ['auth']);
+$router->get('/lab-batches/create', [\App\Controllers\LabBatchController::class, 'create'], ['auth']);
+$router->post('/lab-batches', [\App\Controllers\LabBatchController::class, 'store'], ['auth']);
+$router->get('/lab-batches/{id}', [\App\Controllers\LabBatchController::class, 'show'], ['auth']);
+$router->post('/lab-batches/{id}/add-sequence', [\App\Controllers\LabBatchController::class, 'addSequence'], ['auth']);
+$router->post('/lab-batches/{id}/record-reading', [\App\Controllers\LabBatchController::class, 'recordControlReading'], ['auth']);
+$router->post('/lab-batches/{id}/evaluate-qc', [\App\Controllers\LabBatchController::class, 'evaluateQc'], ['auth']);
+$router->get('/lab-batches/{id}/export-worklist', [\App\Controllers\LabBatchController::class, 'exportWorklist'], ['auth']);
+
+// ============================================================
 // PRODUCT-TEST MAPPING (Master Data)
 // ============================================================
 $router->get('/master/product-tests', [MasterDataController::class, 'productTests'], ['auth']);

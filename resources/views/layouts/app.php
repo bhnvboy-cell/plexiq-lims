@@ -41,8 +41,11 @@
             </a>
 
             <div class="nav-section-label">Quality Control</div>
-            <a href="/batches" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/batches') ? 'active' : '' ?>">
-                <i class="bi bi-boxes"></i><span>Batch Management</span>
+            <a href="/production-lots" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/production-lots') ? 'active' : '' ?>">
+                <i class="bi bi-boxes"></i><span>Production Lots</span>
+            </a>
+            <a href="/lab-batches" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/lab-batches') ? 'active' : '' ?>">
+                <i class="bi bi-flask"></i><span>Lab Batches (Runs)</span>
             </a>
             <a href="/samples" class="nav-item <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/samples') ? 'active' : '' ?>">
                 <i class="bi bi-collection"></i><span>Samples</span>
